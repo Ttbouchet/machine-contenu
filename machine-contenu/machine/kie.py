@@ -13,7 +13,8 @@ from .base import SIMULATION, log, secret
 
 API = os.environ.get("KIE_API_BASE", "https://api.kie.ai")
 UPLOAD = "https://kieai.redpandaai.co/api/file-base64-upload"
-VISION = API + "/api/v1/gemini-2.5-flash/v1/chat/completions"
+# Gemini 2.5 Flash n'existe plus chez KIE (404) ; Gemini 4 Hydrogen teste le 2026-11-22 (~0,2 credit/appel).
+VISION = API + os.environ.get("KIE_VISION_CHEMIN", "/gemini-4-hydrogen-openai/v1/chat/completions")
 
 # Parametres confirmes dans docs.kie.ai et testes le 2026-11-20 (banc d'essai). Video 9:16, 720p, muette si possible.
 MODELES_VIDEO = {
@@ -93,15 +94,17 @@ class Kie:
 
     # ---------- vision ----------
     def vision(self, consigne, urls_images):
-        """Pose une question a Gemini 2.5 Flash sur une ou plusieurs images. Renvoie le JSON de la reponse."""
+        """Pose une question a Gemini (KIE) sur une ou plusieurs images. Renvoie le JSON de la reponse."""
         if SIMULATION:
             return simu_vision(consigne)
         contenu = [{"type": "text", "text": consigne}]
         contenu += [{"type": "image_url", "image_url": {"url": u}} for u in urls_images]
         r = requests.post(VISION, headers={**self.h, "Content-Type": "application/json"}, timeout=120, json={
-            "messages": [{"role": "user", "content": contenu}], "stream": False, "include_thoughts": False})
+            "messages": [{"role": "user", "content": contenu}], "stream": False, "include_thoughts": False, "reasoning_effort": "medium"})
         try:
             b = r.json()
+            if b.get("code") not in (None, 200):  # KIE renvoie ses erreurs en HTTP 200 avec {code, msg}
+                raise ValueError(b.get("msg"))
             texte = b["choices"][0]["message"]["content"]
         except Exception:
             raise RuntimeError(f"vision illisible ({r.status_code}) : {r.text[:300]}")
