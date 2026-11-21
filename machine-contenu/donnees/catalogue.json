@@ -1,0 +1,334 @@
+{
+ "_lisezmoi": "Elements combines chaque jour. Ajoutez a la fin des listes, ne changez jamais un id. Textes en anglais. Les reactions n'utilisent qu'UNE main libre : l'autre tient le telephone.",
+ "decors": [
+  {
+   "id": "cuisine_soir",
+   "texte": "in her kitchen at night, dark cabinets behind her, warm overhead light",
+   "nuit": true
+  },
+  {
+   "id": "cuisine_matin",
+   "texte": "in her kitchen in the morning, daylight from a window, coffee mug on the counter",
+   "nuit": false
+  },
+  {
+   "id": "salon_aprem",
+   "texte": "sitting on the couch in her living room in the afternoon, soft daylight from a window, cushions behind her",
+   "nuit": false
+  },
+  {
+   "id": "salon_soir",
+   "texte": "on her living room couch in the evening, only a floor lamp on, TV glow in the background",
+   "nuit": true
+  },
+  {
+   "id": "lit_nuit",
+   "texte": "in bed at night, propped against pillows, lit only by her laptop screen",
+   "nuit": true
+  },
+  {
+   "id": "lit_matin",
+   "texte": "in bed in the early morning, messy duvet, pale daylight through the curtains",
+   "nuit": false
+  },
+  {
+   "id": "voiture_jour",
+   "texte": "sitting in the driver's seat of her parked car during the day, seatbelt on, parking lot through the window",
+   "nuit": false
+  },
+  {
+   "id": "voiture_nuit",
+   "texte": "in her parked car at night, lit by the dim interior light and her phone screen",
+   "nuit": true
+  },
+  {
+   "id": "bureau_maison",
+   "texte": "at her home desk, laptop open, a stack of printed documents and a desk lamp",
+   "nuit": false
+  },
+  {
+   "id": "rue",
+   "texte": "walking on a city sidewalk on a cloudy day, buildings and cars behind her",
+   "nuit": false
+  },
+  {
+   "id": "cafe",
+   "texte": "in a busy coffee shop, laptop in front of her, people blurred in the background",
+   "nuit": false
+  },
+  {
+   "id": "bibliotheque",
+   "texte": "in a quiet library between tall bookshelves, soft overhead light",
+   "nuit": false
+  },
+  {
+   "id": "balcon",
+   "texte": "on her small apartment balcony at sunset, warm orange light",
+   "nuit": false
+  },
+  {
+   "id": "metro",
+   "texte": "sitting on a train during her commute, window and other passengers blurred behind her",
+   "nuit": false
+  },
+  {
+   "id": "escalier",
+   "texte": "sitting on the stairs of her apartment building, dim hallway light",
+   "nuit": false
+  },
+  {
+   "id": "parc",
+   "texte": "in a city park on an overcast afternoon, trees and a path behind her",
+   "nuit": false
+  },
+  {
+   "id": "campus",
+   "texte": "sitting on a bench on a college campus on a grey afternoon, students walking blurred far behind her",
+   "nuit": false
+  },
+  {
+   "id": "chambre",
+   "texte": "in her small bedroom, unmade bed and a cluttered desk with a laptop behind her, string lights on the wall",
+   "nuit": true
+  }
+ ],
+ "tenues": [
+  {
+   "id": "pull_creme",
+   "texte": "a cream waffle-knit sweater"
+  },
+  {
+   "id": "tshirt_noir",
+   "texte": "a fitted black long-sleeve t-shirt"
+  },
+  {
+   "id": "hoodie_gris",
+   "texte": "a grey zip hoodie"
+  },
+  {
+   "id": "chemise_bleue",
+   "texte": "a light blue button-up shirt with rolled sleeves"
+  },
+  {
+   "id": "tshirt_blanc",
+   "texte": "an oversized plain white t-shirt"
+  },
+  {
+   "id": "cardigan_brun",
+   "texte": "a brown knit cardigan over a white top"
+  },
+  {
+   "id": "sweat_vert",
+   "texte": "a faded sage green crewneck sweatshirt"
+  },
+  {
+   "id": "col_roule",
+   "texte": "a thin black turtleneck"
+  },
+  {
+   "id": "veste_jean",
+   "texte": "a denim jacket over a grey t-shirt"
+  },
+  {
+   "id": "marine",
+   "texte": "a navy blue knit sweater"
+  },
+  {
+   "id": "debardeur",
+   "texte": "a simple black tank top with a beige overshirt"
+  },
+  {
+   "id": "polaire",
+   "texte": "a cozy beige fleece pullover"
+  }
+ ],
+ "coiffures": [
+  {
+   "id": "arriere",
+   "texte": "her hair pushed back off her face, loose"
+  },
+  {
+   "id": "queue_basse",
+   "texte": "her hair in a low loose ponytail"
+  },
+  {
+   "id": "chignon",
+   "texte": "her hair in a messy bun on top of her head with loose strands"
+  },
+  {
+   "id": "lache",
+   "texte": "her hair worn down, neat and natural"
+  },
+  {
+   "id": "oreilles",
+   "texte": "her hair tucked behind her ears"
+  },
+  {
+   "id": "pince",
+   "texte": "her hair held up with a tortoiseshell claw clip"
+  },
+  {
+   "id": "mouilles",
+   "texte": "her hair slightly damp and air-dried, just out of the shower"
+  },
+  {
+   "id": "demi_queue",
+   "texte": "her hair half up, half down"
+  }
+ ],
+ "cadrages": [
+  {
+   "id": "contre_plongee",
+   "format": "selfie",
+   "texte": "phone held close and slightly below her chin, low angle looking up at her face, face filling most of the frame"
+  },
+  {
+   "id": "face",
+   "format": "selfie",
+   "texte": "phone held close at eye level, slightly tilted, face filling most of the frame, only the top of her shoulders visible"
+  },
+  {
+   "id": "plongee",
+   "format": "selfie",
+   "texte": "phone held slightly above her face, high angle looking down at her"
+  },
+  {
+   "id": "tres_proche",
+   "format": "selfie",
+   "texte": "phone held very close to her face, tight close-up, slightly distorted by the wide front lens"
+  },
+  {
+   "id": "decentre",
+   "format": "selfie",
+   "texte": "phone held a bit to the side, slightly tilted and off-center framing, casual and imperfect"
+  },
+  {
+   "id": "allongee",
+   "format": "selfie",
+   "texte": "she is leaning back or half lying down, phone held above her, relaxed posture"
+  },
+  {
+   "id": "marche_face",
+   "format": "marche",
+   "texte": "face and shoulders in frame, background moving behind"
+  }
+ ],
+ "regles_cadrage": {
+  "allongee": [
+   "lit_nuit",
+   "lit_matin",
+   "salon_aprem",
+   "salon_soir",
+   "chambre"
+  ],
+  "marche_face": [
+   "rue",
+   "parc",
+   "campus"
+  ]
+ },
+ "reactions": [
+  {
+   "id": "fige",
+   "ton": "choc",
+   "texte": "She stares at her phone screen, slowly lowers the phone a little and just looks into the lens with a blank, stunned face."
+  },
+  {
+   "id": "main_visage",
+   "ton": "blase",
+   "texte": "She reads her screen, exhales a long slow breath through her mouth and slowly drops her forehead into her free hand."
+  },
+  {
+   "id": "main_bouche",
+   "ton": "choc",
+   "texte": "She reads her screen, covers her mouth with her free hand, then slowly looks up into the lens with wide eyes."
+  },
+  {
+   "id": "soupir",
+   "ton": "blase",
+   "texte": "She reads, closes her eyes, tilts her head back and lets out a long exasperated sigh."
+  },
+  {
+   "id": "secoue_tete",
+   "ton": "blase",
+   "texte": "She reads her screen, slowly shakes her head in disbelief and gives the camera a tired deadpan stare."
+  },
+  {
+   "id": "regard_coupable",
+   "ton": "complice",
+   "texte": "She glances at her screen, looks left and right as if checking nobody is around, then back into the lens with a guilty little smile."
+  },
+  {
+   "id": "relit",
+   "ton": "choc",
+   "texte": "She reads her screen, pulls back, reads again closer with squinted eyes, then looks into the lens in total disbelief."
+  },
+  {
+   "id": "souffle",
+   "ton": "choc",
+   "texte": "She reads her screen, puffs her cheeks and blows out air slowly, eyebrows raised, completely overwhelmed."
+  },
+  {
+   "id": "front_main",
+   "ton": "blase",
+   "texte": "She reads, slowly rubs her forehead with the fingertips of her free hand, eyes closed, as if what she just saw gave her a headache."
+  },
+  {
+   "id": "rire_choque",
+   "ton": "choc",
+   "texte": "She reads her screen and bursts into a short shocked laugh, covers her mouth with her free hand, then looks into the lens still laughing in disbelief."
+  },
+  {
+   "id": "rire_muet",
+   "ton": "complice",
+   "texte": "She reads, lets out a silent stunned laugh, rubs her forehead with her free hand and laughs again quietly, shaking her head."
+  },
+  {
+   "id": "bouche_bee",
+   "ton": "choc",
+   "texte": "She reads her screen and her jaw slowly drops, she stays frozen with her mouth open, then blinks twice at the lens."
+  },
+  {
+   "id": "recul",
+   "ton": "choc",
+   "texte": "She reads her screen and physically leans back away from the phone, eyebrows raised high, as if the screen scared her."
+  },
+  {
+   "id": "sourire_coin",
+   "ton": "complice",
+   "texte": "She reads her screen, a slow knowing smirk spreads on her face, she raises one eyebrow and looks into the lens as if sharing a secret."
+  },
+  {
+   "id": "chut",
+   "ton": "complice",
+   "texte": "She glances at her screen, then looks into the lens and slowly brings one finger of her free hand to her lips, with a small mischievous smile."
+  },
+  {
+   "id": "hoche",
+   "ton": "complice",
+   "texte": "She reads her screen, presses her lips together to hold back a smile and nods slowly at the lens, impressed."
+  }
+ ],
+ "coiffures_homme": [
+  {
+   "id": "naturel",
+   "texte": "his hair as usual, slightly messy"
+  },
+  {
+   "id": "casquette",
+   "texte": "wearing a plain baseball cap"
+  },
+  {
+   "id": "capuche",
+   "texte": "his hoodie hood half up"
+  },
+  {
+   "id": "mouilles_h",
+   "texte": "his hair slightly damp, just out of the shower"
+  },
+  {
+   "id": "plaques",
+   "texte": "his hair pushed back with his hand"
+  }
+ ]
+}

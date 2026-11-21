@@ -1,0 +1,35 @@
+{
+ "demo": "/tmp/claude-0/-home-claude/61896bb1-64cb-52ed-90c3-c593f16a3732/scratchpad/montage/src/demo_complete.mp4",
+ "sortie": "/tmp/claude-0/-home-claude/61896bb1-64cb-52ed-90c3-c593f16a3732/scratchpad/montage/livraison",
+ "etapes": [
+  [0.3, 4.2, 2, "pasted my ChatGPT essay in here"],
+  [4.5, 11, 3, ""],
+  [11, 38.8, 9, ""],
+  [39.2, 43.8, 1, "82% AI 💀"],
+  [43.8, 49, 3, "so I hit humanize"],
+  [49, 99, 12, ""],
+  [99.5, 108.2, 1.4, "rewritten to sound human ✅"]
+ ],
+ "videos": [
+  {"nom": "T1_bibliotheque", "hook": "src/hook_a_qoswd.mp4", "textes": [
+    "just saw a girl in the library write her whole essay. no notes. no open tabs. 😭",
+    "the girl next to me finished her essay in 10 min. I had to ask 😭",
+    "asked the library girl how her essays never get flagged. she showed me this 💀"]},
+  {"nom": "T1b_bibliotheque_ecouteurs", "hook": "src/hook_e_496r.mp4", "textes": [
+    "just saw a girl in the library write her whole essay. no notes. no open tabs. 😭",
+    "the girl next to me finished her essay in 10 min. I had to ask 😭",
+    "asked the library girl how her essays never get flagged. she showed me this 💀"]},
+  {"nom": "T2_prof", "hook": "src/hook_d_5t61.mp4", "textes": [
+    "umm chat my prof just said 'if I think it's ChatGPT, it's a zero' 🤨",
+    "prof: 'I can always tell when it's AI' 🤨 me:",
+    "my professor runs every essay through an AI detector. so here's what I do"]},
+  {"nom": "T4_deadline", "hook": "src/hook_c_1o18.mp4", "textes": [
+    "essay due at 11:59. it's 11:42. watch 👇",
+    "3000 words due tomorrow and I haven't started. here's my plan",
+    "POV: it's 2am and your essay is 82% AI"]},
+  {"nom": "T5_stop_chatgpt", "hook": "src/hook_b_etima.mp4", "textes": [
+    "stop pasting ChatGPT into your essays 🙄",
+    "if you use ChatGPT for essays, watch this before you submit",
+    "ChatGPT users are getting caught. here's why"]}
+ ]
+}

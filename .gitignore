@@ -1,0 +1,22 @@
+# Secrets : jamais dans le depot
+.env
+*.secret
+# Outils locaux
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.claude/
+# Medias lourds ou prives (ils vivent dans le Drive ou sur le Mac)
+banc-essai/resultats/
+montage/medias/
+montage/maquettes/
+personnages/
+# Notes privees de Medhi (restent sur le Mac)
+CLAUDE.md
+AGENTS.md
+PROMPT_DE_DEMARRAGE.md
+docs/
+prototypes/
+# Planches du banc d essai (visage du personnage) : privees
+banc-essai/*.jpg

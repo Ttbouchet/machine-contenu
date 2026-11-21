@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+.env
+modeles/face_recognition_sface_2021dec.onnx
