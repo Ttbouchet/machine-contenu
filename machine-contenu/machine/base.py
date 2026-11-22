@@ -2,6 +2,7 @@
 import datetime as dt
 import json
 import os
+import re
 import tempfile
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -46,7 +47,12 @@ def horodatage():
     return maintenant().isoformat(timespec="minutes")
 
 
+PUBLIC = os.environ.get("GITHUB_ACTIONS") == "true"  # les journaux GitHub d'un depot public sont visibles de tous
+
+
 def log(msg):
+    if PUBLIC:
+        msg = re.sub(r"[\w.+-]+@[\w-]+\.[\w.]+", "[compte]", str(msg))
     print(f"[{maintenant():%H:%M:%S}] {msg}", flush=True)
 
 

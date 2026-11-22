@@ -164,6 +164,8 @@ def simu_vision(consigne):
     if "TRADUIS" in consigne:
         return {"consigne_prompt": "Do not do this: simulated rule.", "question_controle": "Is the simulated rule respected?",
                 "anglais": "simulated English text"}
+    if "cover of a TikTok video" in consigne:
+        return {"texte": ""}
     if "permanent physical identity" in consigne:
         return {"identite": "the exact same person as in the reference photos, instantly recognizable: simulated identity"}
     ko = f"vision_ko_{_simu_compteur['vision']}" in scen

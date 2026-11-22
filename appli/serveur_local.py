@@ -37,7 +37,13 @@ def ecrire_json(nom, valeur):
 def action(d):
     a = d.get("action")
     if a == "app_charger":
-        return {"config": drive.config(), "etat": drive.etat_lire(), "decisions": lire_json("decisions.json", [])}
+        return {"config": drive.config(), "etat": drive.etat_lire(), "decisions": lire_json("decisions.json", []),
+                "resultats": lire_json("resultats.json", {}), "tiktok": lire_json("tiktok_simu.json", {
+                    "appli_prete": True, "connecte": False, "url_autorisation": "http://localhost:%d/appli/tiktok/?auth_code=simu" % PORT})}
+    if a == "app_tiktok_code":
+        statut = {"appli_prete": True, "connecte": True, "url_autorisation": "", "connecte_le": datetime.now().isoformat(timespec="seconds") + " par test local"}
+        ecrire_json("tiktok_simu.json", statut)
+        return {"tiktok": statut}
     if a == "app_config_ecrire":
         actuel = drive.config() or {}
         if int(d["config"].get("version") or 0) != int(actuel.get("version") or 0):

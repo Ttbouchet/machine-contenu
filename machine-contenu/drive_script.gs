@@ -4,24 +4,31 @@
 //   - l'APPLI Studio (iPhone / Mac) : connexion Google, seuls les e-mails de EMAILS_AUTORISES passent ;
 //   - l'e-mail du matin « images pretes ».
 // A remplir : SECRET, CLIENT_ID_GOOGLE, EMAILS_AUTORISES.
+// Dans Parametres du projet > Proprietes du script (jamais dans le code ni dans une conversation) :
+//   TIKTOK_APP_ID, TIKTOK_SECRET, TIKTOK_URL_AUTORISATION  (appli developpeur TikTok, lecture seule)
+//   GITHUB_JETON                                            (relance la machine a heure fixe, voir installer_declencheurs)
 
 const SECRET = 'COLLEZ_ICI_LE_MOT_DE_PASSE';
 const CLIENT_ID_GOOGLE = 'COLLEZ_ICI_L_IDENTIFIANT_CLIENT.apps.googleusercontent.com';
 const EMAILS_AUTORISES = ['email.de.medhi@gmail.com', 'email.de.l.associe@gmail.com'];
 const DOSSIER_MACHINE = '1VJF-xiHGXMUeqve2RJUYQKefrWTsG353'; // MACHINE CONTENU (ne pas toucher)
 const DOSSIER_VIDEOS = '1Hpp7AjMRv8KqWqu79wbbfFLNqP02bRBT';  // VIDEO CLAUDE MONTE
+const TIKTOK_REDIRECTION = 'https://ttbouchet.github.io/machine-contenu/appli/tiktok/';
+const TIKTOK_API = 'https://business-api.tiktok.com/open_api/v1.3/tt_user/oauth2/';
+const DEPOT_GITHUB = 'Ttbouchet/machine-contenu';
 
 function doPost(e) {
   try {
     const d = JSON.parse(e.postData.contents);
     if (d.jeton) {
       const qui = verifierJeton(d.jeton);
-      const actions = { app_charger, app_config_ecrire, app_decider, app_image, app_lister };
+      const actions = { app_charger, app_config_ecrire, app_decider, app_image, app_lister, app_tiktok_code };
       if (!actions[d.action]) return rep({ ok: false, erreur: 'action inconnue : ' + d.action });
       return rep(Object.assign({ ok: true, qui }, actions[d.action](d, qui)));
     }
     if (d.secret !== SECRET) return rep({ ok: false, erreur: 'mot de passe incorrect' });
-    const actions = { config, etat_lire, etat_ecrire, deposer, lister, lire, decisions_lire, decisions_purger, notifier };
+    const actions = { config, etat_lire, etat_ecrire, deposer, lister, lire, decisions_lire, decisions_purger, notifier,
+                      resultats_lire, resultats_ecrire, tiktok_jeton };
     if (!actions[d.action]) return rep({ ok: false, erreur: 'action inconnue : ' + d.action });
     return rep(Object.assign({ ok: true }, actions[d.action](d)));
   } catch (err) {
@@ -167,7 +174,8 @@ function notifier(d) {
 // ------------------------------------------------------------------ appli
 function app_charger() {
   const c = config().contenu;
-  return { config: c ? JSON.parse(c) : null, etat: lireJson('etat.json', {}), decisions: lireJson('decisions.json', []) };
+  return { config: c ? JSON.parse(c) : null, etat: lireJson('etat.json', {}), decisions: lireJson('decisions.json', []),
+           resultats: lireJson('resultats.json', {}), tiktok: tiktok_statut() };
 }
 
 // Enregistre de nouveaux reglages. Refuse si quelqu'un d'autre a enregistre entre-temps (version).
@@ -214,4 +222,89 @@ function app_image(d) {
 
 function app_lister(d) {
   return lister(d);
+}
+
+// ------------------------------------------------------------------ resultats (fiches des videos + chiffres TikTok)
+function resultats_lire() {
+  const f = fichierJson('resultats.json', false);
+  return { contenu: f ? f.getBlob().getDataAsString('UTF-8') : '{}' };
+}
+
+function resultats_ecrire(d) {
+  fichierJson('resultats.json', true).setContent(d.contenu);
+  return {};
+}
+
+// ------------------------------------------------------------------ TikTok (lecture seule des statistiques)
+// Les jetons TikTok restent ici, dans les proprietes du script. La machine demande un jeton valable a chaque releve.
+function proprietes() { return PropertiesService.getScriptProperties(); }
+
+function tiktok_statut() {
+  const p = proprietes();
+  const pret = !!(p.getProperty('TIKTOK_APP_ID') && p.getProperty('TIKTOK_SECRET'));
+  return { appli_prete: pret, connecte: !!p.getProperty('TIKTOK_REFRESH'),
+           url_autorisation: pret ? (p.getProperty('TIKTOK_URL_AUTORISATION') || '') : '',
+           connecte_le: p.getProperty('TIKTOK_CONNECTE_LE') || '' };
+}
+
+function tiktokAppel(chemin, corps) {
+  const p = proprietes();
+  const r = UrlFetchApp.fetch(TIKTOK_API + chemin, {
+    method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+    payload: JSON.stringify(Object.assign({ client_id: p.getProperty('TIKTOK_APP_ID'),
+                                            client_secret: p.getProperty('TIKTOK_SECRET') }, corps)) });
+  const b = JSON.parse(r.getContentText() || '{}');
+  if (b.code !== 0 || !b.data || !b.data.access_token) throw new Error('TikTok : ' + (b.message || r.getContentText().slice(0, 200)));
+  return b.data;
+}
+
+function tiktokGarder(d) {
+  proprietes().setProperties({
+    TIKTOK_ACCES: d.access_token, TIKTOK_ACCES_FIN: String(Date.now() + (Number(d.expires_in || 86400) - 600) * 1000),
+    TIKTOK_REFRESH: d.refresh_token, TIKTOK_OPEN_ID: d.open_id || proprietes().getProperty('TIKTOK_OPEN_ID') || '' });
+}
+
+// L'appli renvoie ici le code recu apres « Connecter TikTok » (valable 10 minutes, une seule fois).
+function app_tiktok_code(d, qui) {
+  if (!tiktok_statut().appli_prete) throw new Error('appli TikTok pas encore configurée dans le script Google');
+  tiktokGarder(tiktokAppel('token/', { grant_type: 'authorization_code', auth_code: d.code, redirect_uri: TIKTOK_REDIRECTION }));
+  proprietes().setProperty('TIKTOK_CONNECTE_LE', new Date().toISOString() + ' par ' + qui);
+  return { tiktok: tiktok_statut() };
+}
+
+// Pour la machine : un jeton d'acces valable (renouvele automatiquement ; le renouvellement dure un an).
+function tiktok_jeton() {
+  const p = proprietes();
+  if (!p.getProperty('TIKTOK_REFRESH')) return { erreur: 'TikTok non connecté : bouton « Connecter TikTok » dans Studio > Résultats' };
+  if (!p.getProperty('TIKTOK_ACCES') || Date.now() > Number(p.getProperty('TIKTOK_ACCES_FIN') || 0)) {
+    tiktokGarder(tiktokAppel('refresh_token/', { grant_type: 'refresh_token', refresh_token: p.getProperty('TIKTOK_REFRESH') }));
+  }
+  return { access_token: p.getProperty('TIKTOK_ACCES'), open_id: p.getProperty('TIKTOK_OPEN_ID') };
+}
+
+// ------------------------------------------------------------------ relance de la machine a heure fixe
+// Le planning de GitHub est peu fiable (3 passages sur 56 le 22/11). Ce script relance donc la machine lui-meme :
+// chaque heure, a 3 h 47 (images du jour) et vers 8 h (depart automatique). Executer UNE fois installer_declencheurs.
+function lancerMachine(commande) {
+  const jeton = proprietes().getProperty('GITHUB_JETON');
+  if (!jeton) throw new Error('GITHUB_JETON manquant dans les propriétés du script');
+  const r = UrlFetchApp.fetch('https://api.github.com/repos/' + DEPOT_GITHUB + '/actions/workflows/machine.yml/dispatches', {
+    method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+    headers: { Authorization: 'Bearer ' + jeton, Accept: 'application/vnd.github+json' },
+    payload: JSON.stringify({ ref: 'main', inputs: { commande: commande } }) });
+  if (r.getResponseCode() !== 204) throw new Error('GitHub a refusé (' + r.getResponseCode() + ') : ' + r.getContentText().slice(0, 200));
+}
+
+function relancer_matin() { lancerMachine('matin'); }
+function relancer_suivi() { lancerMachine('suivi'); }
+
+function installer_declencheurs() {
+  ScriptApp.getProjectTriggers().forEach(t => {
+    if (['relancer_matin', 'relancer_suivi'].indexOf(t.getHandlerFunction()) >= 0) ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('relancer_matin').timeBased().everyDays(1).atHour(3).nearMinute(50).inTimezone('Asia/Dubai').create();
+  ScriptApp.newTrigger('relancer_suivi').timeBased().everyDays(1).atHour(8).nearMinute(15).inTimezone('Asia/Dubai').create();
+  ScriptApp.newTrigger('relancer_suivi').timeBased().everyHours(1).create();
+  lancerMachine('diagnostic');  // test immediat : un passage « diagnostic » doit apparaitre dans GitHub > Actions
+  return 'ok';
 }

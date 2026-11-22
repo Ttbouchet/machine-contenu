@@ -2,8 +2,10 @@ name: Machine contenu
 
 on:
   schedule:
+    # Filet de securite seulement : le planning GitHub saute souvent des passages. Le vrai reveil vient du
+    # script Google (installer_declencheurs) : chaque heure, 3 h 47 et 8 h (Dubai).
     - cron: "47 23 * * *"            # 3 h 47 a Dubai : generation des images du jour
-    - cron: "7,22,37,52 * * * *"     # toutes les 15 min : decisions de Studio, videos, livraison, castings
+    - cron: "17 * * * *"             # chaque heure : decisions de Studio, videos, livraison, castings, chiffres TikTok
   workflow_dispatch:
     inputs:
       commande:

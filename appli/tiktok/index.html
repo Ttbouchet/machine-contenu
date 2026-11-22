@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Studio · TikTok</title>
+<meta name="robots" content="noindex">
+<style>
+  :root { --fond: #F6F6F3; --encre: #18181B; --gris: #52525B; }
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+         background: var(--fond); color: var(--gris); font-family: Inter, system-ui, -apple-system, sans-serif; text-align: center; }
+  a { color: #2448C8; }
+</style>
+</head>
+<body>
+<p id="msg">Retour de TikTok…</p>
+<script>
+  // Page de retour après « Connecter TikTok » : on repasse le code à Studio, qui l'envoie au script Google.
+  const q = new URLSearchParams(location.search);
+  const code = q.get('auth_code') || q.get('code');
+  if (code) {
+    const suite = new URLSearchParams({ tiktok_code: code, state: q.get('state') || '' });
+    location.replace('../?' + suite.toString() + '#/resultats');
+  } else {
+    document.getElementById('msg').innerHTML = 'TikTok n\'a pas donné son accord (' +
+      (q.get('error_description') || q.get('error') || 'connexion annulée').replace(/[<>&]/g, '') +
+      '). <a href="../#/resultats">Retour à Studio</a>';
+  }
+</script>
+</body>
+</html>

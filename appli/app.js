@@ -3,7 +3,7 @@
 import { appel, connecter, deconnecter, estLocal, utilisateur } from './api.js';
 import { REGLAGES } from './reglages.js';
 
-const S = { cfg: null, etat: {}, decisions: [], brouillon: null, sale: false, catalogue: null,
+const S = { cfg: null, etat: {}, decisions: [], brouillon: null, sale: false, catalogue: null, resultats: {}, tiktok: {}, ingredient: 'hook',
             filtre: 'tous', refus: {}, envoi: {}, confirmer: null, charge: false };
 const app = document.getElementById('app');
 
@@ -32,6 +32,7 @@ const icone = {
   perso: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"></path></svg>',
   banc: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg>',
   histo: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 3v5h5M12 7v5l3 2"></path></svg>',
+  resultats: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"></path><path d="M15 7h6v6"></path></svg>',
   reglages: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg>',
 };
 
@@ -76,7 +77,7 @@ function creditsDuJour() {
 async function recharger(silencieux) {
   try {
     const b = await appel('app_charger');
-    S.etat = b.etat || {}; S.decisions = b.decisions || [];
+    S.etat = b.etat || {}; S.decisions = b.decisions || []; S.resultats = b.resultats || {}; S.tiktok = b.tiktok || {};
     if (!S.sale) {
       S.cfg = b.config || { version: 0, general: { pause: false, budget_credits_jour: 1600, heure_limite_validation: 8, alerte_si_credits_sous: 3000 }, projets: [], personnages: [] };
       S.brouillon = copie(S.cfg);
@@ -117,7 +118,7 @@ async function decider(decision, message) {
 function cadre(page, html) {
   const n = aValider().length;
   const liens = [['aujourdhui', 'Aujourd\'hui', icone.jour, n], ['projets', 'Projets', icone.dossier], ['personnages', 'Personnages', icone.perso],
-                 ['banc', 'Banc d\'essai IA', icone.banc], ['historique', 'Historique', icone.histo], ['reglages', 'Réglages', icone.reglages]];
+                 ['resultats', 'Résultats', icone.resultats], ['banc', 'Banc d\'essai IA', icone.banc], ['historique', 'Historique', icone.histo], ['reglages', 'Réglages', icone.reglages]];
   const lien = ([id, nom, ic, badge]) => `<a href="#/${id}" ${page === id ? 'aria-current="page"' : ''}>${ic}<span>${nom}</span>${badge ? `<span class="pastille">${badge}</span>` : ''}</a>`;
   const solde = S.etat.solde_kie;
   return `<div class="cadre">
@@ -131,7 +132,7 @@ function cadre(page, html) {
       </div>
     </nav>
     <main class="contenu" id="contenu">${html}</main>
-    <nav class="onglets" aria-label="Navigation">${liens.filter((l) => l[0] !== 'historique').map(([id, nom, ic, badge]) =>
+    <nav class="onglets" aria-label="Navigation">${liens.filter((l) => !['historique', 'banc'].includes(l[0])).map(([id, nom, ic, badge]) =>
       `<a href="#/${id}" ${page === id ? 'aria-current="page"' : ''}>${ic}<span>${nom.replace(' IA', '')}</span>${badge ? `<span class="pastille">${badge}</span>` : ''}</a>`).join('')}</nav>
   </div>`;
 }
@@ -392,6 +393,145 @@ function vueHistorique() {
   return h;
 }
 
+// ------------------------------------------------------------------ écran : Résultats (chiffres TikTok + fiche de chaque vidéo)
+const INGREDIENTS = { hook: 'Hook', ton: 'Ton du hook', reaction: 'Réaction', decor: 'Décor', tenue: 'Tenue', cadrage: 'Cadrage',
+                      modele_video: 'Modèle vidéo', personnage: 'Personnage', format: 'Format', jour_semaine: 'Jour de publication',
+                      heure_pub: 'Heure de publication (Dubaï)' };
+const JOURS_LONGS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+const PAYS = { US: 'États-Unis', FR: 'France', GB: 'Royaume-Uni', AE: 'Émirats', BE: 'Belgique', CA: 'Canada', DE: 'Allemagne',
+               BR: 'Brésil', IE: 'Irlande', NL: 'Pays-Bas', MV: 'Maldives', AU: 'Australie', CH: 'Suisse', MA: 'Maroc', ES: 'Espagne', IT: 'Italie' };
+const pct = (x, d = 0) => (x == null || isNaN(x)) ? '—' : (x * 100).toLocaleString('fr-FR', { maximumFractionDigits: d, minimumFractionDigits: d }) + ' %';
+const sec = (x) => (x == null || isNaN(x)) ? '—' : (+x).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' s';
+const joli = (id) => String(id ?? '—').replace(/[_-]+/g, ' ');
+const partUS = (v) => (v.audience_countries || []).find((c) => c.country === 'US')?.percentage ?? null;
+
+// Une ligne par publication TikTok, avec sa fiche d'ingrédients si on l'a retrouvée.
+function lignesResultats() {
+  const R = S.resultats || {}; const fiches = R.fiches || {};
+  return Object.values(R.videos || {}).map((v) => {
+    const f = v.fiche ? fiches[v.fiche] : null;
+    const hr = v.hook_reconnu;
+    const d = v.create_time ? new Date(+v.create_time * 1000) : null;
+    const hDub = d ? +d.toLocaleTimeString('en-GB', { timeZone: 'Asia/Dubai', hour: '2-digit', hour12: false }) : null;
+    return { v, f, d,
+      texte: f?.texte || hr?.texte || v.texte_lu || v.caption || '',
+      ing: { hook: f?.texte || hr?.texte || null, ton: TONS[f?.ton || hr?.ton] || null, reaction: f?.reaction, decor: f?.decor, tenue: f?.tenue,
+             cadrage: f?.cadrage, modele_video: MODELES_VIDEO[f?.modele_video] || f?.modele_video, personnage: f ? nomPerso(f.personnage) : null,
+             format: f ? (FORMATS[f.format]?.[0] || 'Classique') : null,
+             jour_semaine: d ? JOURS_LONGS[+new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Dubai' })).getDay()] : null,
+             heure_pub: hDub == null ? null : `${String(Math.floor(hDub / 3) * 3).padStart(2, '0')} h – ${String(Math.floor(hDub / 3) * 3 + 3).padStart(2, '0')} h` },
+      vues: +v.video_views || 0, entier: v.full_video_watched_rate, moy: v.average_time_watched, us: partUS(v) };
+  }).sort((a, b) => (b.d || 0) - (a.d || 0));
+}
+
+const moyenne = (xs) => { const ok = xs.filter((x) => x != null && !isNaN(x)); return ok.length ? ok.reduce((a, b) => a + +b, 0) / ok.length : null; };
+
+// Note « réelle » de 1 à 10 : rang des vues parmi toutes les vidéos (10 = la meilleure).
+function noteReelle(l, toutes) {
+  if (toutes.length < 3) return null;
+  const moins = toutes.filter((x) => x.vues < l.vues).length;
+  return Math.max(1, Math.round(1 + 9 * moins / (toutes.length - 1)));
+}
+
+function vueResultats() {
+  const R = S.resultats || {}; const T = S.tiktok || {}; const t = R.tiktok || {};
+  const lignes = lignesResultats();
+  const demande = S.decisions.some((d) => d.type === 'releve_tiktok');
+  let h = `<header class="entete"><div><h1>Résultats</h1><p class="petit" style="margin-top:6px">Chiffres TikTok de chaque vidéo, reliés à sa fiche (hook, réaction, décor, modèle…). Relevé chaque jour vers 9 h ; TikTok a 24 à 48 h de retard.</p></div>
+    ${T.connecte ? `<button type="button" class="bouton" data-action="releve-tiktok" ${demande ? 'disabled' : ''}>${demande ? 'Relevé demandé…' : 'Relever maintenant'}</button>` : ''}</header>`;
+  if (!T.connecte) {
+    h += `<section class="carte"><h2>Connecter TikTok (lecture seule)</h2>`;
+    h += T.url_autorisation
+      ? `<p>L'appli TikTok est prête. Clique, connecte-toi avec le compte <strong>@rewordyai</strong> et accepte : Studio pourra lire les statistiques (jamais publier).</p>
+         <div><button type="button" class="bouton principal" data-action="connecter-tiktok">Connecter TikTok</button></div>`
+      : `<p class="petit">Il faut d'abord créer l'appli développeur TikTok et la faire valider (guide <em>docs/GUIDE_connexion_tiktok.md</em>). En attendant, les fiches des vidéos sont déjà enregistrées : rien ne sera perdu.</p>`;
+    h += `</section>`;
+  } else if (t.etat === 'erreur') {
+    h += `<div class="bandeau ko">Dernier relevé TikTok en échec : ${esc(t.message)}</div>`;
+  }
+  if (t.releve) h += `<p class="petit">Dernier relevé : ${esc(t.releve.replace('T', ' '))} · ${nombre(t.nb)} vidéos${T.connecte_le ? ` · connecté le ${esc(T.connecte_le.slice(0, 10))}` : ''}</p>`;
+
+  // Chiffres clés
+  if (lignes.length) {
+    const vuesTot = lignes.reduce((a, l) => a + l.vues, 0);
+    const usPond = lignes.filter((l) => l.us != null);
+    const us = usPond.length ? usPond.reduce((a, l) => a + l.us * l.vues, 0) / Math.max(1, usPond.reduce((a, l) => a + l.vues, 0)) : null;
+    h += `<section class="grille g4">
+      <div class="carte chiffre">Vidéos publiées<b>${nombre(lignes.length)}</b><small>${nombre(lignes.filter((l) => l.f).length)} reliées à leur fiche</small></div>
+      <div class="carte chiffre">Vues moyennes<b>${nombre(vuesTot / lignes.length)}</b><small>meilleure : ${nombre(Math.max(...lignes.map((l) => l.vues)))}</small></div>
+      <div class="carte chiffre">Regardées en entier<b>${pct(moyenne(lignes.map((l) => l.entier)), 1)}</b><small>durée moyenne regardée : ${sec(moyenne(lignes.map((l) => l.moy)))}</small></div>
+      <div class="carte chiffre">Spectateurs aux US<b>${pct(us)}</b><small>c'est la cible : à faire monter</small></div></section>`;
+  }
+
+  // Publications à relier (doute)
+  const doutes = lignes.filter((l) => l.v.liaison === 'doute');
+  const enAttente = new Set(S.decisions.filter((d) => d.type === 'liaison').map((d) => String(d.video)));
+  if (doutes.length) {
+    h += `<section class="carte"><h2>À confirmer (${doutes.length})</h2><p class="petit">Plusieurs fiches ressemblent à ces vidéos : choisis la bonne.</p>`;
+    for (const l of doutes) {
+      const iid = l.v.item_id;
+      h += `<div class="ligne" style="border-top:1px solid var(--doux);padding-top:12px;align-items:flex-start;gap:12px">
+        ${l.v.thumbnail_url ? `<img src="${esc(l.v.thumbnail_url)}" alt="" style="width:56px;height:90px;object-fit:cover;border-radius:8px;background:var(--doux)">` : ''}
+        <div style="flex:1;display:flex;flex-direction:column;gap:8px"><span><strong>« ${esc(l.v.texte_lu || l.v.caption || 'sans texte')} »</strong> <span class="petit">· publiée le ${l.d ? esc(l.d.toLocaleDateString('fr-FR', { timeZone: 'Asia/Dubai' })) : '?'}</span></span>
+        ${enAttente.has(String(iid)) ? '<span class="puce">Enregistré, pris en compte au prochain passage</span>'
+          : `<div class="puces-choix">${(l.v.possibles || []).map((fid) => `<button type="button" data-action="relier" data-video="${esc(iid)}" data-fiche="${esc(fid)}">${esc((R.fiches[fid] || {}).texte || fid)} · ${esc((R.fiches[fid] || {}).jour || '')}</button>`).join('')}
+            <button type="button" data-action="relier" data-video="${esc(iid)}" data-fiche="">Aucune</button></div>`}</div></div>`;
+    }
+    h += `</section>`;
+  }
+
+  // Classements par ingrédient
+  if (lignes.length) {
+    const ing = S.ingredient || 'hook';
+    const groupes = {};
+    for (const l of lignes) { const k = l.ing[ing]; if (k == null || k === '') continue; (groupes[k] = groupes[k] || []).push(l); }
+    const rangs = Object.entries(groupes).map(([k, ls]) => ({ k, n: ls.length, vues: moyenne(ls.map((l) => l.vues)), entier: moyenne(ls.map((l) => l.entier)), moy: moyenne(ls.map((l) => l.moy)), us: moyenne(ls.map((l) => l.us)) }))
+      .sort((a, b) => b.vues - a.vues);
+    const maxV = Math.max(1, ...rangs.map((r) => r.vues));
+    h += `<section class="carte"><div class="ligne entre"><h2>Ce qui marche le mieux</h2>
+      <label class="champ" style="flex-direction:row;align-items:center;gap:8px">Classer par <select data-action-saisie="ingredient">${Object.entries(INGREDIENTS).map(([k, n]) => `<option value="${k}" ${k === ing ? 'selected' : ''}>${n}</option>`).join('')}</select></label></div>
+      ${rangs.length ? `<div class="tableau"><table><thead><tr><th>${esc(INGREDIENTS[ing])}</th><th>Vidéos</th><th style="min-width:160px">Vues moyennes</th><th>En entier</th><th>Durée moy.</th><th>US</th></tr></thead><tbody>
+      ${rangs.map((r) => `<tr><td>${esc(ing === 'hook' ? r.k : joli(r.k))}</td><td>${r.n}${r.n < 3 ? ' <span class="petit">(peu)</span>' : ''}</td>
+        <td><div class="ligne" style="gap:8px"><div class="jauge" style="flex:1;min-width:60px"><i style="width:${(100 * r.vues / maxV).toFixed(0)}%"></i></div>${nombre(r.vues)}</div></td>
+        <td>${pct(r.entier, 1)}</td><td>${sec(r.moy)}</td><td>${pct(r.us)}</td></tr>`).join('')}</tbody></table></div>`
+        : '<p class="petit">Pas encore de vidéo avec cette information (elle vient des fiches de la machine).</p>'}
+      <p class="petit">À lire avec prudence tant qu'il y a moins de 3 vidéos par ligne.</p></section>`;
+  }
+
+  // Toutes les vidéos
+  if (lignes.length) {
+    h += `<section class="carte"><h2>Toutes les vidéos</h2><div class="tableau"><table><thead><tr><th></th><th>Publiée</th><th>Hook</th><th>Vues</th><th>En entier</th><th>Durée moy.</th><th>US</th><th>Partages</th><th>Prévu / réel</th></tr></thead><tbody>
+      ${lignes.map((l) => { const reel = noteReelle(l, lignes); const prevu = l.f?.note_prevue;
+        return `<tr><td>${l.v.thumbnail_url ? `<img src="${esc(l.v.thumbnail_url)}" alt="" loading="lazy" style="width:40px;height:64px;object-fit:cover;border-radius:6px;background:var(--doux)">` : ''}</td>
+        <td>${l.d ? esc(l.d.toLocaleDateString('fr-FR', { timeZone: 'Asia/Dubai', day: 'numeric', month: 'short' })) : '—'}</td>
+        <td style="max-width:280px">${l.v.share_url ? `<a href="${esc(l.v.share_url)}" target="_blank" rel="noopener">${esc(l.texte || 'sans texte')}</a>` : esc(l.texte)}
+          <div class="petit">${l.f ? `fiche ${esc(l.f.jour)} · ${esc(joli(l.f.reaction))} · ${esc(joli(l.f.decor))}` : (l.v.hook_reconnu ? 'avant la machine' : 'sans fiche')}</div></td>
+        <td><strong>${nombre(l.vues)}</strong></td><td>${pct(l.entier, 1)}</td><td>${sec(l.moy)}</td><td>${pct(l.us)}</td><td>${nombre(l.v.shares)}</td>
+        <td>${prevu ? prevu : '—'} / ${reel ?? '—'}</td></tr>`; }).join('')}</tbody></table></div></section>`;
+
+    // Pays (moyenne pondérée par les vues)
+    const pays = {}; let poids = 0;
+    for (const l of lignes) { if (!(l.v.audience_countries || []).length) continue; poids += l.vues; for (const c of l.v.audience_countries) pays[c.country] = (pays[c.country] || 0) + c.percentage * l.vues; }
+    if (poids) {
+      const top = Object.entries(pays).map(([c, x]) => [c, x / poids]).sort((a, b) => b[1] - a[1]).slice(0, 8);
+      h += `<section class="carte"><h2>D'où viennent les spectateurs</h2>${top.map(([c, x]) => `<div class="ligne" style="gap:10px"><span style="width:120px">${esc(PAYS[c] || c)}</span><div class="jauge" style="flex:1"><i style="width:${(x * 100).toFixed(0)}%;${c === 'US' ? '' : 'background:var(--bord-fort)'}"></i></div><span style="width:56px;text-align:right">${pct(x)}</span></div>`).join('')}</section>`;
+    }
+  }
+
+  // Fiches pas encore publiées : prévision 1-10
+  const publiees = new Set(lignes.map((l) => l.v.fiche).filter(Boolean));
+  const aNoter = Object.values(R.fiches || {}).filter((f) => !publiees.has(f.id)).sort((a, b) => String(b.jour).localeCompare(a.jour)).slice(0, 12);
+  const notes = Object.fromEntries(S.decisions.filter((d) => d.type === 'note').map((d) => [d.fiche, d.note]));
+  if (aNoter.length) {
+    h += `<section class="carte"><h2>Vidéos livrées, pas encore vues sur TikTok (${aNoter.length})</h2><p class="petit">Ta prévision de 1 à 10 avant publication. On la comparera au résultat réel pour affiner le calendrier.</p>
+      ${aNoter.map((f) => { const n = notes[f.id] ?? f.note_prevue; return `<div class="ligne entre" style="border-top:1px solid var(--doux);padding-top:10px;flex-wrap:wrap;gap:8px">
+        <span style="flex:1;min-width:200px"><strong>${esc(f.texte)}</strong><br><span class="petit">${esc(f.jour)} · ${esc(joli(f.reaction))} · ${esc(joli(f.decor))} · ${esc(MODELES_VIDEO[f.modele_video] || f.modele_video)}${f.drive_url ? ` · <a href="${esc(f.drive_url)}" target="_blank" rel="noopener">voir</a>` : ''}</span></span>
+        <span class="puces-choix">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((k) => `<button type="button" style="min-width:38px;padding:0 8px" data-action="noter" data-fiche="${esc(f.id)}" data-note="${k}" aria-pressed="${+n === k}">${k}</button>`).join('')}</span></div>`; }).join('')}</section>`;
+  }
+  if (!lignes.length && !aNoter.length) h += `<div class="vide">Rien encore : les fiches apparaissent dès qu'une vidéo est livrée, les chiffres dès que TikTok est connecté.</div>`;
+  return h;
+}
+
 // ------------------------------------------------------------------ écran : Réglages
 function vueReglages() {
   const g = S.brouillon.general || (S.brouillon.general = {});
@@ -414,7 +554,7 @@ function rendre() {
   if (!S.charge) return;
   const [page, id] = route();
   const vues = { aujourdhui: vueAujourdhui, projets: vueProjets, projet: () => vueProjet(id), personnages: vuePersonnages,
-                 personnage: () => vuePersonnage(id), banc: vueBanc, historique: vueHistorique, reglages: vueReglages };
+                 personnage: () => vuePersonnage(id), resultats: vueResultats, banc: vueBanc, historique: vueHistorique, reglages: vueReglages };
   const actif = { projet: 'projets', personnage: 'personnages' }[page] || page;
   const y = window.scrollY;
   app.innerHTML = cadre(actif, (vues[page] || vueAujourdhui)());
@@ -475,6 +615,13 @@ const ACTIONS = {
   'basculer-perso': () => { const p = persoOuvert(); p.statut = p.statut === 'actif' ? 'pause' : 'actif'; modifier(); rendre(); },
   oublier: (el) => decider({ type: 'regle_oublier', fr: el.dataset.fr }, 'La règle sera retirée au prochain passage'),
   pause: () => { const g = S.brouillon.general; g.pause = !g.pause; enregistrer(); },
+  'releve-tiktok': () => decider({ type: 'releve_tiktok' }, 'Relevé demandé : il sera fait au prochain passage (≤ 1 h)'),
+  relier: (el) => decider({ type: 'liaison', video: el.dataset.video, fiche: el.dataset.fiche }, 'Enregistré'),
+  noter: (el) => { S.decisions = S.decisions.filter((d) => !(d.type === 'note' && d.fiche === el.dataset.fiche));
+    decider({ type: 'note', fiche: el.dataset.fiche, note: +el.dataset.note }, `Prévision : ${el.dataset.note}/10`); },
+  'connecter-tiktok': () => { const etatOauth = Math.random().toString(36).slice(2);
+    try { sessionStorage.setItem('studio_tiktok_state', etatOauth); } catch (e) { /* navigation privée */ }
+    const u = new URL(S.tiktok.url_autorisation); u.searchParams.set('state', etatOauth); location.href = u.toString(); },
 };
 
 app.addEventListener('click', (e) => {
@@ -494,6 +641,7 @@ app.addEventListener('input', (e) => {
   if (a === 'motif') { S.refus[el.dataset.id].motif = el.value; return; }
   if (a === 'part') { const p = projetOuvert(); (p.personnages = p.personnages || {})[el.dataset.id] = +el.value || 0; return modifier(); }
   if (a === 'hook-texte') { projetOuvert().hooks[+el.dataset.i].texte = el.value; return modifier(); }
+  if (a === 'ingredient') { S.ingredient = el.value; return rendre(); }
   if (a === 'hook-ton') { projetOuvert().hooks[+el.dataset.i].ton = el.value; return modifier(); }
 });
 app.addEventListener('change', (e) => { if (e.target.tagName === 'SELECT') e.target.dispatchEvent(new Event('input', { bubbles: true })); });
@@ -506,6 +654,21 @@ window.addEventListener('beforeunload', (e) => { if (S.sale) { e.preventDefault(
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.charge && !S.sale) recharger(true); });
 setInterval(() => { if (document.visibilityState === 'visible' && S.charge && !S.sale) recharger(true); }, 120000);
 
+// Retour de la page de connexion TikTok (appli/tiktok/) : on envoie le code au script Google, qui le garde.
+async function retourTiktok() {
+  const q = new URLSearchParams(location.search);
+  const code = q.get('tiktok_code');
+  if (!code) return;
+  history.replaceState(null, '', location.pathname + '#/resultats');
+  let attendu = null; try { attendu = sessionStorage.getItem('studio_tiktok_state'); } catch (e) { /* rien */ }
+  if (attendu && q.get('state') !== attendu) return toast('Connexion TikTok refusée (vérification de sécurité). Réessaie.');
+  try {
+    const b = await appel('app_tiktok_code', { code });
+    S.tiktok = b.tiktok || S.tiktok; rendre(); toast('TikTok connecté. Premier relevé au prochain passage.');
+    decider({ type: 'releve_tiktok' }, 'TikTok connecté. Premier relevé au prochain passage (≤ 1 h).');
+  } catch (e) { toast('Connexion TikTok impossible : ' + e.message); }
+}
+
 // ------------------------------------------------------------------ démarrage
 (async () => {
   try {
@@ -515,6 +678,7 @@ setInterval(() => { if (document.visibilityState === 'visible' && S.charge && !S
       await connecter(document.getElementById('bouton-google'));
     }
     await recharger(true);
+    await retourTiktok();
   } catch (e) {
     if (/connexion expirée|reconnectez/.test(e.message)) return location.reload();
     ecranErreur(e.message);

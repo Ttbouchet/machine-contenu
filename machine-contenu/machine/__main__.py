@@ -75,7 +75,9 @@ def main():
     except Exception as e:
         log("ERREUR : " + traceback.format_exc())
         try:
-                    Telegram().message(f"⚠️ Problème technique pendant « {cmd} » : {e}\nLe prochain passage réessaie automatiquement.")
+            from . import drive
+            drive.notifier("Studio : problème technique", f"⚠️ Problème technique pendant « {cmd} » : {e}\n"
+                           "Le prochain passage réessaie automatiquement.")
         except Exception:
             pass
         raise

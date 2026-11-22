@@ -2,7 +2,7 @@
 
   matin  (3 h 47, heure de Dubai) : pour chaque projet actif aujourd'hui, choisit les combinaisons, genere et
          controle les images ; elles apparaissent dans l'appli Studio (e-mail « images pretes »).
-  suivi  (toutes les 15 min) : decisions prises dans Studio, images a refaire, videos validees, controles, montage,
+  suivi  (chaque heure)      : decisions prises dans Studio, images a refaire, videos validees, controles, montage,
          Drive ; et les castings de nouveaux personnages demandes dans Studio.
 
 Chaque video a une case (slot) qui avance :
@@ -15,13 +15,13 @@ import json
 import os
 import time
 
-from . import drive, scenarios
-from .base import (RACINE, SIMULATION, TECH, dossier_travail, heure, horodatage, jour, lien_studio, log,
+from . import drive, resultats, scenarios
+from .base import (PUBLIC, RACINE, SIMULATION, TECH, dossier_travail, heure, horodatage, jour, lien_studio, log,
                    maintenant)
 from .controles import (Visage, controler_image, controler_video, description_casting, identite_depuis_photo,
                         traduire, traduire_motif)
 from .kie import Kie, telecharger
-from .montage import monter
+from .montage import duree, monter
 
 FINIS = ("livre", "abandonne")
 ACTIFS = ("image_en_cours", "valide", "video_en_cours", "attente_motif")
@@ -46,6 +46,7 @@ class Machine:
         self.etat = {**json.loads(json.dumps(ETAT_VIDE)), **drive.etat_lire()}
         self._sauve = json.dumps(self.etat, sort_keys=True)
         self._visages = {}
+        self._res, self._res_ko = None, False
 
     # ------------------------------------------------------------------ outils
     @property
@@ -55,6 +56,19 @@ class Machine:
     @property
     def pause(self):
         return bool(self.general.get("pause"))
+
+    @property
+    def res(self):
+        """Fiches des videos + chiffres TikTok (resultats.json), lu une seule fois par passage."""
+        if self._res is None:
+            try:
+                self._res = resultats.lire()
+                self._res_ko = False
+            except Exception as e:  # ex. script Google pas encore mis a jour : la production continue quand meme
+                log(f"résultats illisibles ({e}) : fiches non enregistrées pendant ce passage")
+                self._res, self._res_ko = json.loads(json.dumps(resultats.VIDE)), True
+            self._res_sauve = json.dumps(self._res, sort_keys=True)
+        return self._res
 
     @property
     def j(self):
@@ -71,14 +85,21 @@ class Machine:
             self.etat["historique"] = self.etat["historique"][-500:]
             drive.etat_ecrire(self.etat)
             self._sauve = json.dumps(self.etat, sort_keys=True)
+        if self._res is not None and not self._res_ko and json.dumps(self._res, sort_keys=True) != self._res_sauve:
+            try:
+                resultats.ecrire(self._res)
+                self._res_sauve = json.dumps(self._res, sort_keys=True)
+            except Exception as e:
+                log(f"résultats non enregistrés : {e}")
 
-    def noter(self, texte):
-        log(texte)
+    def noter(self, texte, public=None):
+        """Journal complet dans Studio ; `public` = version courte pour les journaux GitHub (visibles de tous)."""
+        log(public if (public is not None and PUBLIC) else texte)
         self.etat["journal"].append({"quand": horodatage(), "texte": texte})
 
-    def alerte(self, texte, sujet="Studio : information"):
+    def alerte(self, texte, sujet="Studio : information", public=None):
         """Note dans le journal (visible dans Studio) et envoie un e-mail aux personnes autorisees."""
-        self.noter(texte)
+        self.noter(texte, public if public is not None else sujet)
         try:
             drive.notifier(sujet, texte + lien_studio())
         except Exception as e:
@@ -359,6 +380,12 @@ class Machine:
         s["drive_url"] = drive.deposer(finale, "videos", [projet["nom"], jour()])
         s["statut"] = "livre"
         s["livre_a"] = horodatage()
+        try:
+            s["duree"] = round(duree(finale), 3)
+        except Exception as e:
+            log(f"durée illisible : {e}")
+        f = resultats.fiche_depuis_slot(jour(), s, projet, s.get("duree"))
+        self.res["fiches"][f["id"]] = f
         self.noter(f"{s['id']} livrée")
 
     # ------------------------------------------------------------------ castings
@@ -381,12 +408,12 @@ class Machine:
                                                     [], TECH["resolution_image"]) for i in range(NB_CANDIDATS)]
                     self.etat["castings"][pid] = {"essai": essai, "statut": "candidats_en_cours", "description_en": desc,
                                                   "taches": taches, "candidats": [], "depuis": horodatage()}
-                    self.noter(f"casting {perso['nom']} : {NB_CANDIDATS} candidats en cours")
+                    self.noter(f"casting {perso['nom']} : {NB_CANDIDATS} candidats en cours", f"casting {pid} : {NB_CANDIDATS} candidats en cours")
                 elif c["statut"] == "candidats_en_cours":
                     urls = self._suivre(c)
                     if urls is not None:
                         c.update(statut="candidats_prets", candidats=urls, taches=[])
-                        self.noter(f"casting {perso['nom']} : {len(urls)} candidats prêts")
+                        self.noter(f"casting {perso['nom']} : {len(urls)} candidats prêts", f"casting {pid} : {len(urls)} candidats prêts")
                         self.alerte(f"🎭 Casting « {perso['nom']} » : {len(urls)} candidats prêts. "
                                         "Choisissez le bon dans Studio (Personnages).")
                 elif c["statut"] == "candidats_prets" and perso.get("choix") is not None:
@@ -396,13 +423,13 @@ class Machine:
                     c.update(choix=int(perso["choix"]), statut="refs_en_cours", depuis=horodatage(),
                              taches=[self.kie.lancer_image(TECH["modele_image"], scenarios.prompt_ref(perso.get("genre"), i),
                                                            [url], TECH["resolution_image"]) for i in range(NB_REFS)])
-                    self.noter(f"casting {perso['nom']} : photos de référence en cours")
+                    self.noter(f"casting {perso['nom']} : photos de référence en cours", f"casting {pid} : photos de référence en cours")
                 elif c["statut"] == "refs_en_cours":
                     urls = self._suivre(c)
                     if urls is not None:
                         self._finir_casting(perso, c, urls)
             except Exception as e:
-                self.noter(f"casting {perso.get('nom')} : erreur {e}")
+                self.noter(f"casting {perso.get('nom')} : erreur {e}", f"casting {perso.get('id')} : erreur {e}")
 
     def _suivre(self, c):
         """Renvoie la liste des URLs quand toutes les taches sont finies, sinon None."""
@@ -442,7 +469,7 @@ class Machine:
         c.update(statut="refs_pretes", refs=[choisi] + [u for _, _, u in bons], identite=identite,
                  scores=[round(g[0], 3) for g in bons], taches=[], fini=horodatage())
         self.etat["personnages"].setdefault(pid, {}).update(refs_urls=c["refs"], refs_jour=jour())
-        self.noter(f"casting {perso['nom']} : terminé ({len(bons)} photos gardées)")
+        self.noter(f"casting {perso['nom']} : terminé ({len(bons)} photos gardées)", f"casting {pid} : terminé ({len(bons)} photos gardées)")
         self.alerte(f"✅ « {perso['nom']} » est prêt ({len(bons) + 1} photos de référence). "
                         "Vérifiez-le et activez-le dans Studio pour qu'il entre en production.")
 
@@ -466,7 +493,17 @@ class Machine:
                     avant = len(self.etat["regles_apprises"])
                     self.etat["regles_apprises"] = [r for r in self.etat["regles_apprises"] if r.get("fr") != d.get("fr")]
                     if len(self.etat["regles_apprises"]) < avant:
-                        self.noter(f"règle retirée par {d.get('qui')} : {d.get('fr')}")
+                        self.noter(f"règle retirée par {d.get('qui')} : {d.get('fr')}", "règle retirée")
+                elif d.get("type") == "note":
+                    f = self.res["fiches"].get(d.get("fiche"))
+                    if f:
+                        f["note_prevue"] = max(1, min(10, int(d.get("note"))))
+                elif d.get("type") == "liaison":
+                    v = self.res["videos"].get(str(d.get("video")))
+                    if v:
+                        v.update(fiche=d.get("fiche") or None, liaison="manuel", possibles=[])
+                elif d.get("type") == "releve_tiktok":
+                    self._releve_demande = True
             except Exception as ex:
                 log(f"décision ignorée ({ex}) : {d}")
             faites.append(d["id"])
@@ -494,7 +531,7 @@ class Machine:
             self.etat["regles_apprises"].append({"jour": jour(), "fr": motif, "par": qui, **regle})
             s["motif"] = motif
             correction = regle.get("consigne_prompt") or correction
-            self.noter(f"règle apprise ({qui}) : {motif}")
+            self.noter(f"règle apprise ({qui}) : {motif}", "règle apprise")
         if s["refus"] >= TECH["refus_max_par_video"]:
             s["statut"] = "abandonne"
             return self.noter(f"{s['id']} abandonnée pour aujourd'hui ({s['refus']} refus)")
@@ -513,6 +550,31 @@ class Machine:
         return (f"Journée du {jour()}" + (" (PAUSE)" if self.pause else "") + "\n" + "\n".join(lignes) +
                 f"\nCrédits utilisés : {utilises:.0f} (≈ {utilises * TECH['prix_credit_usd']:.2f} $)" +
                 (f" · solde {actuel:.0f}" if actuel is not None else ""))
+
+    # ------------------------------------------------------------------ resultats TikTok
+    def completer_fiches(self):
+        """Cree la fiche des videos livrees qui n'en ont pas encore (ex. livrees avant cette version)."""
+        for jr, info in self.etat["jours"].items():
+            for s in info.get("slots", []):
+                if s.get("statut") == "livre" and f"{jr}_{s['id']}" not in self.res["fiches"]:
+                    f = resultats.fiche_depuis_slot(jr, s, self.projet(s["projet"]), s.get("duree"))
+                    self.res["fiches"][f["id"]] = f
+
+    def resultats_du_jour(self):
+        """Une fois par jour a partir de 9 h (Dubai), ou tout de suite si demande dans Studio."""
+        self.completer_fiches()
+        if self._res_ko:
+            return
+        t = self.res.get("tiktok") or {}
+        dernier = (t.get("releve") or t.get("essai") or "")[:10]
+        if not (getattr(self, "_releve_demande", False) or os.environ.get("RELEVE_TIKTOK") == "1"
+                or (heure() >= 9 and dernier != jour())):
+            return
+        self._releve_demande = False
+        try:
+            self.noter(resultats.releve(self.res, self.kie, self.cfg))
+        except Exception as e:
+            self.noter(f"relevé TikTok impossible : {e}")
 
     # ------------------------------------------------------------------ fin
     def fin_de_journee(self):
@@ -549,6 +611,10 @@ def executer(commande):
                 m.matin()
             else:
                 m.avancer()
+        try:
+            m.resultats_du_jour()
+        except Exception as e:
+            log(f"résultats : {e}")
         m.etat["derniere_execution"]["resultat"] = "ok"
     except Exception as e:
         m.etat["derniere_execution"]["resultat"] = f"erreur : {e}"

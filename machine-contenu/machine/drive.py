@@ -46,6 +46,15 @@ def etat_ecrire(etat):
     _appel("etat_ecrire", contenu=json.dumps(etat, ensure_ascii=False))
 
 
+def resultats_lire():
+    """Fiches des videos + chiffres TikTok (resultats.json)."""
+    return json.loads(_appel("resultats_lire").get("contenu") or "{}")
+
+
+def resultats_ecrire(res):
+    _appel("resultats_ecrire", contenu=json.dumps(res, ensure_ascii=False))
+
+
 def decisions_lire():
     """Decisions prises dans Studio (validations, refus + motif, regles a oublier), pas encore traitees."""
     return _appel("decisions_lire").get("decisions") or []
@@ -96,6 +105,12 @@ def _simu(action, **kw):
     if action == "etat_ecrire":
         open(os.path.join(m, "etat.json"), "w", encoding="utf-8").write(kw["contenu"])
         return {}
+    if action in ("resultats_lire", "resultats_ecrire"):
+        p = os.path.join(m, "resultats.json")
+        if action == "resultats_ecrire":
+            open(p, "w", encoding="utf-8").write(kw["contenu"])
+            return {}
+        return {"contenu": open(p, encoding="utf-8").read() if os.path.exists(p) else "{}"}
     if action == "deposer":
         d = os.path.join(_racine(kw["zone"]), *kw["chemin"])
         os.makedirs(d, exist_ok=True)
