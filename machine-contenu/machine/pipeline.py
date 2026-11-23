@@ -15,7 +15,7 @@ import json
 import os
 import time
 
-from . import drive, resultats, scenarios, veille
+from . import calendrier, drive, resultats, scenarios, veille
 from .base import (PUBLIC, RACINE, SIMULATION, TECH, dossier_travail, heure, horodatage, jour, lien_studio, log,
                    maintenant)
 from .controles import (Visage, controler_image, controler_video, description_casting, identite_depuis_photo,
@@ -196,12 +196,29 @@ class Machine:
             if not qui:
                 self.noter(f"{projet['nom']} : aucun personnage actif attribué, rien à produire")
                 continue
+            plan = calendrier.plan_du_jour(projet.get("calendrier"), jour(), len(qui))
             try:
-                combos = scenarios.choisir(projet, [self.perso(q) for q in qui], self.etat["historique"])
+                combos = scenarios.choisir(projet, [self.perso(q) for q in qui], self.etat["historique"],
+                                           consignes=plan or None)
             except Exception as e:
                 self.noter(f"{projet['nom']} : impossible de préparer la journée ({e})")
                 self.alerte(f"⚠️ {projet['nom']} : {e}. Corrigez dans Studio.")
                 continue
+            if plan:
+                c0 = plan[0]
+                resume.append(f"test J{c0['j']} « {c0['test_nom']} »")
+                for c, pc in zip(combos, plan):
+                    c.update(test=pc["test"], test_j=pc["j"], variante=pc["variante"], heure_pub=pc["heure"])
+                    if pc["format"] not in ("classique", ""):
+                        c["format_voulu"] = pc["format"]  # format pas encore monte par la machine
+                mal = [c for c in combos if c.get("consigne_respectee") not in (None, "ok")]
+                if mal:
+                    self.alerte(f"⚠️ Calendrier J{c0['j']} : {len(mal)} vidéo(s) sans hook adapté à la variante "
+                                "(langue ou ennemi). Ajoutez des textes étiquetés dans Studio (Projets → textes de hook).")
+                voulu = next((c["format_voulu"] for c in combos if c.get("format_voulu")), None)
+                if voulu:
+                    self.alerte(f"⚠️ Calendrier J{c0['j']} : le format « {voulu} » "
+                                "n'est pas encore monté par la machine : ces vidéos sortent au format actuel.")
             for n, c in enumerate(combos, 1):
                 self.j["slots"].append({"id": f"{projet['id']}-{n}", "num": n, "sur": len(combos), **c,
                                         "statut": "nouveau", "essai": 0, "essais_auto": 0, "refus": 0,
@@ -380,7 +397,10 @@ class Machine:
             if s is not None:
                 s["demo"] = d
             return chemin
-        demos = self.demos_dispo()
+        fr = (s or {}).get("langue") == "fr"
+        toutes = self.demos_dispo()
+        demos = [f for f in toutes if f["nom"].lower().startswith("fr_") == fr] or \
+                [f for f in toutes if not f["nom"].lower().startswith("fr_")]
         if not demos:
             if s is not None:
                 s["demo"] = "corps_demo"
@@ -407,7 +427,7 @@ class Machine:
         if not ok:
             return self.video_ratee(s, rapport.get("probleme", ""))
         perso, projet, _ = self.contexte(s)
-        nom = f"{jour()}_{s['id']}_{s['personnage']}_{s['hook']}.mp4"
+        nom = f"{calendrier.prefixe(s)}{jour()}_{s['id']}_{s['personnage']}_{s['hook']}.mp4"
         finale = monter(hook, s["texte"], os.path.join(d, nom), self.demo_locale(projet, s))
         s["drive_url"] = drive.deposer(finale, "videos", [projet["nom"], jour()])
         s["statut"] = "livre"
@@ -534,6 +554,16 @@ class Machine:
                     v = self.res["videos"].get(str(d.get("video")))
                     if v:
                         v.update(fiche=d.get("fiche") or None, liaison="manuel", possibles=[])
+                elif d.get("type") == "chiffres":  # saisie a la main (en attendant l'API TikTok)
+                    f = self.res["fiches"].get(d.get("fiche"))
+                    if f:
+                        vues = d.get("vues")
+                        entier = d.get("entier")
+                        f["manuel"] = {"vues": int(vues) if vues not in (None, "") else None,
+                                       "entier": float(entier) if entier not in (None, "") else None,
+                                       "saisi": d.get("quand") or horodatage(), "qui": d.get("qui")}
+                elif d.get("type") == "proposition_traitee":  # texte propose, ajoute ou ecarte dans Studio
+                    self.res["propositions"] = [x for x in self.res.get("propositions", []) if x.get("id") != d.get("proposition")]
                 elif d.get("type") == "releve_tiktok":
                     self._releve_demande = True
                 elif d.get("type") == "veille_lancer":

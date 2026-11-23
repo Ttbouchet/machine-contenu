@@ -3,7 +3,7 @@
 
 Chaque corps = suite d'étapes [source, debut, fin, vitesse, legende]. Vidéo muette (le son du hook suffit),
 légendes d'étape en bulles blanches en bas. Usage :
-  python montage/corps_demos.py [nom_du_corps ...]   (sans argument : tous)
+  python montage/corps_demos.py [--fr] [nom_du_corps ...]   (sans argument : tous ; --fr = légendes en français)
 Les sources brutes sont sur le Mac (~/Desktop/RewordyDemo) ; les corps finis vont dans montage/medias/demos/.
 """
 import os, sys, tempfile
@@ -73,6 +73,36 @@ CORPS = {
 }
 
 
+# Version française (test de langue) : même vidéo d'appli, légendes traduites. Corps rangés sous « fr_<nom>.mp4 ».
+FR = {
+    "pasted my ChatGPT essay in here": "j'ai collé ma dissert ChatGPT ici",
+    "82% AI 💀": "82 % IA 💀",
+    "so I hit humanize": "du coup j'appuie sur humanize",
+    "rewritten to sound human ✅": "réécrite, on dirait un humain ✅",
+    "ran my essay through an AI detector": "j'ai passé ma dissert au détecteur d'IA",
+    "82% AI. my prof would've caught it 💀": "82 % IA. ma prof m'aurait grillée direct 💀",
+    "one click on humanize": "un clic sur humanize",
+    "now it reads like I wrote it ✅": "là on dirait vraiment que c'est moi ✅",
+    "checking my essay before I submit": "je vérifie ma dissert avant de la rendre",
+    "82% AI 😭": "82 % IA 😭",
+    "so I tried the humanizer": "alors j'ai testé le humanizer",
+    "testing my essay on my phone": "je teste ma dissert sur mon tel",
+    "hit humanize": "j'appuie sur humanize",
+    "copied my whole essay": "j'ai copié toute ma dissert",
+    "humanize →": "humanize →",
+    "sounds human now ✅": "là ça fait humain ✅",
+    "pasted my essay into an AI detector": "j'ai collé ma dissert dans un détecteur d'IA",
+    "82% AI. would you still submit it? 😬": "82 % IA. tu la rendrais quand même ? 😬",
+}
+
+
+def en_francais(etapes):
+    manque = [e[4] for e in etapes if e[4] and e[4] not in FR]
+    if manque:
+        raise SystemExit(f"légendes sans traduction : {manque}")
+    return [(src, d0, d1, v, FR.get(txt, txt)) for src, d0, d1, v, txt in etapes]
+
+
 def fabriquer(nom, etapes, sortie):
     tmp = tempfile.mkdtemp()
     parts, t, overlays = [], 0.0, []
@@ -108,7 +138,9 @@ def fabriquer(nom, etapes, sortie):
 
 if __name__ == "__main__":
     os.makedirs(SORTIE, exist_ok=True)
-    for nom in (sys.argv[1:] or CORPS):
-        out = os.path.join(SORTIE, f"{nom}.mp4")
-        fabriquer(nom, CORPS[nom], out)
+    args = sys.argv[1:]
+    fr = "--fr" in args
+    for nom in ([a for a in args if a != "--fr"] or CORPS):
+        out = os.path.join(SORTIE, f"{'fr_' if fr else ''}{nom}.mp4")
+        fabriquer(nom, en_francais(CORPS[nom]) if fr else CORPS[nom], out)
         print(f"{nom} : {duree(out):.1f} s, {os.path.getsize(out)//1_000_000} Mo", flush=True)

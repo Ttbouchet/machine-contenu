@@ -14,7 +14,8 @@ from . import drive, tiktok
 from .base import DUBAI, horodatage, log
 
 VIDE = {"fiches": {}, "videos": {}, "tiktok": {}}
-INGREDIENTS = ("projet", "personnage", "hook", "texte", "ton", "decor", "tenue", "coiffure", "cadrage", "reaction", "demo")
+INGREDIENTS = ("projet", "personnage", "hook", "texte", "ton", "decor", "tenue", "coiffure", "cadrage", "reaction", "demo",
+               "langue", "ennemi", "test", "test_j", "variante", "heure_pub", "format_voulu")
 GARDER = ("create_time", "caption", "thumbnail_url", "share_url", "video_duration", "video_views", "reach", "likes",
           "comments", "shares", "favorites", "full_video_watched_rate", "average_time_watched", "total_time_watched",
           "new_followers", "profile_views", "audience_countries", "impression_sources", "audience_types",

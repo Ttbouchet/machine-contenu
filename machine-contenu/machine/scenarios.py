@@ -5,6 +5,7 @@ import random
 import re
 
 from .base import TECH, donnee
+from .calendrier import ennemi_du_hook, langue_du_hook
 
 REALISME = ("Raw unedited phone photo, ordinary real life, slight blur, digital noise, imperfect lighting, "
             "low contrast, no HDR, visible skin texture, natural everyday look with light or no makeup, healthy skin, not posed, not a model shoot, "
@@ -50,8 +51,18 @@ def repartir(nb, poids):
     return [k for k, n in base.items() for _ in range(n)]
 
 
-def choisir(projet, personnages_du_jour, historique, graine=None):
-    """Une combinaison par video : texte du projet, lieu compatible, tenue, coiffure, cadrage, reaction au bon ton."""
+def _filtre(hooks, consigne, avec_ennemi=True):
+    """Hooks qui respectent la consigne du calendrier (langue, et ennemi si demande)."""
+    if not consigne:
+        return list(hooks)
+    lg, en = consigne.get("langue") or "en", consigne.get("ennemi") if avec_ennemi else ""
+    return [h for h in hooks if langue_du_hook(h) == lg and (not en or ennemi_du_hook(h) == en)]
+
+
+def choisir(projet, personnages_du_jour, historique, graine=None, consignes=None):
+    """Une combinaison par video : texte du projet, lieu compatible, tenue, coiffure, cadrage, reaction au bon ton.
+    `consignes` (calendrier de tests) : une consigne par video {langue, ennemi, ...} ; None = comme avant."""
+    consignes = consignes or [None] * len(personnages_du_jour)
     cat = donnee("catalogue.json")
     rnd = random.Random(graine)
     hooks = [h for h in projet.get("hooks", []) if h.get("texte", "").strip()]
@@ -68,15 +79,29 @@ def choisir(projet, personnages_du_jour, historique, graine=None):
     rnd.shuffle(candidats)
 
     choisis, decors_pris, reactions_prises = [], set(), set()
-    for perso in personnages_du_jour:
+    for perso, consigne in zip(personnages_du_jour, consignes):
         interdits = set(perso.get("lieux_interdits") or [])
-        for h in list(candidats):
+        pris = {c["hook"] for c in choisis}
+        frais = [h for h in candidats if h["id"] not in pris]
+        tous = [h for h in hooks if h["id"] not in pris]
+        respect = "ok"
+        pool = _filtre(frais, consigne)
+        if consigne and not pool:  # tous deja utilises recemment : on accepte une repetition plutot que trahir le test
+            pool = _filtre(sorted(tous, key=lambda h: rnd.random()), consigne)
+        if consigne and not pool:
+            pool, respect = _filtre(frais, consigne, avec_ennemi=False) or _filtre(tous, consigne, avec_ennemi=False), "sans_ennemi"
+        if consigne and not pool:
+            pool, respect = frais or tous, "aucun"
+        if not consigne:  # hors calendrier : anglais (les hooks FR ne servent qu'aux tests de langue)
+            pool = [h for h in frais if langue_du_hook(h) == "en"] or frais
+        for h in list(pool):
             lieux = h.get("lieux")
             decors = [d for d in cat["decors"] if (not lieux or d["id"] in lieux) and d["id"] not in interdits
                       and d["id"] not in decors_pris] or \
                      [d for d in cat["decors"] if (not lieux or d["id"] in lieux) and d["id"] not in interdits]
             if decors:
-                candidats.remove(h)
+                if h in candidats:
+                    candidats.remove(h)
                 break
         else:
             raise RuntimeError(f"aucun texte compatible avec les lieux autorisés pour {perso['nom']}")
@@ -97,7 +122,9 @@ def choisir(projet, personnages_du_jour, historique, graine=None):
         reactions_prises.add(reaction["id"])
         choisis.append({"projet": projet["id"], "personnage": perso["id"], "hook": h["id"], "texte": h["texte"],
                         "decor": decor["id"], "tenue": tenue["id"], "coiffure": rnd.choice(coiffures)["id"],
-                        "cadrage": rnd.choice(cadrages)["id"], "reaction": reaction["id"]})
+                        "cadrage": rnd.choice(cadrages)["id"], "reaction": reaction["id"],
+                        "langue": langue_du_hook(h), "ennemi": ennemi_du_hook(h),
+                        **({"consigne_respectee": respect} if consigne else {})})
     return choisis
 
 

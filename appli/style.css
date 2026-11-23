@@ -113,8 +113,8 @@ img { display: block; max-width: 100%; }
 .dossier:hover { border-color: var(--bord-fort); }
 .dossier.nouveau { border: 2px dashed var(--bord-fort); background: transparent; align-items: center; justify-content: center; min-height: 200px; color: var(--gris); cursor: pointer; font: inherit; }
 .avatar { width: 44px; height: 44px; border-radius: 12px; object-fit: cover; background: var(--doux); flex: none; }
-.hook-ligne { display: grid; grid-template-columns: minmax(0, 1fr) 130px 44px; gap: 8px; align-items: center; }
-@media (max-width: 760px) { .hook-ligne { grid-template-columns: minmax(0, 1fr) 44px; } .hook-ligne select { grid-column: 1 / 2; } }
+.hook-ligne { display: grid; grid-template-columns: minmax(0, 1fr) 110px 70px 190px 44px; gap: 8px; align-items: center; }
+@media (max-width: 760px) { .hook-ligne { grid-template-columns: 1fr 1fr 44px; } .hook-ligne input { grid-column: 1 / 4; } .hook-ligne select:nth-of-type(3) { grid-column: 1 / 3; } }
 .candidats { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
 .candidats button { padding: 0; border: 3px solid transparent; border-radius: 14px; overflow: hidden; background: var(--doux); cursor: pointer; }
 .candidats button[aria-pressed="true"] { border-color: var(--bleu); }

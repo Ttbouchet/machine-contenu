@@ -33,6 +33,7 @@ const icone = {
   banc: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg>',
   histo: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 3v5h5M12 7v5l3 2"></path></svg>',
   resultats: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"></path><path d="M15 7h6v6"></path></svg>',
+  calendrier: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>',
   veille: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4.3-4.3"></path></svg>',
   reglages: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg>',
 };
@@ -119,7 +120,7 @@ async function decider(decision, message) {
 function cadre(page, html) {
   const n = aValider().length;
   const liens = [['aujourdhui', 'Aujourd\'hui', icone.jour, n], ['projets', 'Projets', icone.dossier], ['personnages', 'Personnages', icone.perso],
-                 ['resultats', 'Résultats', icone.resultats], ['veille', 'Veille', icone.veille], ['banc', 'Banc d\'essai IA', icone.banc], ['historique', 'Historique', icone.histo], ['reglages', 'Réglages', icone.reglages]];
+                 ['resultats', 'Résultats', icone.resultats], ['calendrier', 'Calendrier', icone.calendrier], ['veille', 'Veille', icone.veille], ['banc', 'Banc d\'essai IA', icone.banc], ['historique', 'Historique', icone.histo], ['reglages', 'Réglages', icone.reglages]];
   const lien = ([id, nom, ic, badge]) => `<a href="#/${id}" ${page === id ? 'aria-current="page"' : ''}>${ic}<span>${nom}</span>${badge ? `<span class="pastille">${badge}</span>` : ''}</a>`;
   const solde = S.etat.solde_kie;
   return `<div class="cadre">
@@ -279,10 +280,12 @@ function vueProjet(id) {
         <span style="flex:1"><strong>${esc(x.nom)}</strong><br><span class="petit">${x.statut === 'actif' ? 'actif' : 'pas encore actif'}</span></span>
         <input class="saisie" type="number" min="0" max="100" style="width:90px" data-action-saisie="part" data-id="${esc(x.id)}" value="${(p.personnages || {})[x.id] || 0}" aria-label="Part de ${esc(x.nom)}"></label>`).join('')}</div>` : '<div class="vide">Aucun personnage. Créez-en un dans Personnages.</div>'}</section>
     <section class="carte"><div class="ligne entre"><h2>Textes de hook (${(p.hooks || []).length})</h2><button type="button" class="bouton" data-action="ajout-hook">+ Ajouter</button></div>
-      <p class="petit">Le texte affiché à l'écran pendant la réaction. Le ton choisit la réaction du personnage. Un texte ne revient pas avant 14 jours.</p>
+      <p class="petit">Le texte affiché à l'écran pendant la réaction. Le ton choisit la réaction du personnage. Langue et ennemi servent au calendrier de tests (hors tests, seuls les textes EN sont utilisés). Un texte ne revient pas avant 14 jours.</p>
       <div style="display:flex;flex-direction:column;gap:8px">${(p.hooks || []).map((k, i) => `<div class="hook-ligne">
         <input class="saisie" data-action-saisie="hook-texte" data-i="${i}" value="${esc(k.texte)}" aria-label="Texte du hook ${i + 1}">
         <select class="saisie" data-action-saisie="hook-ton" data-i="${i}" aria-label="Ton">${Object.entries(TONS).map(([t, l]) => `<option value="${t}" ${k.ton === t ? 'selected' : ''}>${l}</option>`).join('')}</select>
+        <select class="saisie" data-action-saisie="hook-langue" data-i="${i}" aria-label="Langue"><option value="en" ${(k.langue || 'en') === 'en' ? 'selected' : ''}>EN</option><option value="fr" ${k.langue === 'fr' ? 'selected' : ''}>FR</option></select>
+        <select class="saisie" data-action-saisie="hook-ennemi" data-i="${i}" aria-label="Ennemi"><option value="" ${!k.ennemi ? 'selected' : ''}>Ennemi : auto (${esc(ENNEMIS[ennemiAuto(k.texte)] || 'aucun')})</option>${Object.entries(ENNEMIS).map(([e, l]) => `<option value="${e}" ${k.ennemi === e ? 'selected' : ''}>${l}</option>`).join('')}</select>
         <button type="button" class="bouton danger" style="padding:0" data-action="suppr-hook" data-i="${i}" aria-label="Supprimer ce texte">✕</button></div>`).join('')}</div></section>
     <section class="carte"><label class="champ">Consignes pour toutes les images de ce projet<small>En français. Ex. « jamais le mot beautiful », « public : étudiants américains ».</small>
       <textarea data-p="contraintes">${esc(p.contraintes || '')}</textarea></label></section>
@@ -435,7 +438,7 @@ function vueVeille() {
 
 // ------------------------------------------------------------------ écran : Résultats (chiffres TikTok + fiche de chaque vidéo)
 const INGREDIENTS = { hook: 'Hook', ton: 'Ton du hook', reaction: 'Réaction', decor: 'Décor', tenue: 'Tenue', cadrage: 'Cadrage', demo: 'Démo écran',
-                      modele_video: 'Modèle vidéo', personnage: 'Personnage', format: 'Format', jour_semaine: 'Jour de publication',
+                      langue: 'Langue', ennemi: 'Ennemi du hook', modele_video: 'Modèle vidéo', personnage: 'Personnage', format: 'Format', jour_semaine: 'Jour de publication',
                       heure_pub: 'Heure de publication (Dubaï)' };
 const JOURS_LONGS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
 const PAYS = { US: 'États-Unis', FR: 'France', GB: 'Royaume-Uni', AE: 'Émirats', BE: 'Belgique', CA: 'Canada', DE: 'Allemagne',
@@ -458,6 +461,7 @@ function lignesResultats() {
       ing: { hook: f?.texte || hr?.texte || null, ton: TONS[f?.ton || hr?.ton] || null, reaction: f?.reaction, decor: f?.decor, tenue: f?.tenue,
              cadrage: f?.cadrage, demo: f?.demo ? joli(f.demo.replace(/\.mp4$/i, '')) : null, modele_video: MODELES_VIDEO[f?.modele_video] || f?.modele_video, personnage: f ? nomPerso(f.personnage) : null,
              format: f ? (FORMATS[f.format]?.[0] || 'Classique') : null,
+             langue: f ? (f.langue === 'fr' ? 'Français' : 'Anglais') : null, ennemi: f?.ennemi ? (ENNEMIS[f.ennemi] || f.ennemi) : null,
              jour_semaine: d ? JOURS_LONGS[+new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Dubai' })).getDay()] : null,
              heure_pub: hDub == null ? null : `${String(Math.floor(hDub / 3) * 3).padStart(2, '0')} h – ${String(Math.floor(hDub / 3) * 3 + 3).padStart(2, '0')} h` },
       vues: +v.video_views || 0, entier: v.full_video_watched_rate, moy: v.average_time_watched, us: partUS(v) };
@@ -572,6 +576,190 @@ function vueResultats() {
   return h;
 }
 
+// ------------------------------------------------------------------ écran : Calendrier de tests
+// Même logique que machine/calendrier.py : chaque jour teste UNE variable, A-B-A le 1er jour, B-A-B le 2e.
+const CAL_BASE = { langue: 'en', heure: '19:00', demo: 'actuelle', format: 'classique' };
+const CAL_DEFAUT = { actif: true, debut: '2026-11-24', gagnants: {}, tests: [
+  { id: 'reference', nom: 'Référence', jours: 2, A: {}, B: null },
+  { id: 'langue', nom: 'Langue', jours: 2, A: { langue: 'en' }, B: { langue: 'fr' } },
+  { id: 'ennemi', nom: 'Ennemi du hook', jours: 2, A: { ennemi: 'turnitin' }, B: { ennemi: 'prof' } },
+  { id: 'heure', nom: 'Heure de publication', jours: 2, A: { heure: '19:00' }, B: { heure: '22:00' } },
+  { id: 'demo', nom: 'Démo', jours: 2, A: { demo: 'actuelle' }, B: { format: 'ecran_partage' } }] };
+const ENNEMIS = { turnitin: 'Turnitin / Compilatio', prof: 'Prof', chatgpt: 'ChatGPT', detecteur: 'Détecteur d\'IA', deadline: 'Deadline' };
+const MOTS_ENNEMIS = { turnitin: ['turnitin', 'compilatio'], prof: ['prof', 'professor', 'teacher', 'ta', 'lecturer', 'enseignant', 'maitresse'],
+  chatgpt: ['chatgpt', 'chat gpt', 'gpt'], detecteur: ['detector', 'gptzero', 'zerogpt', 'detecteur', 'flagged', 'flag'],
+  deadline: ['deadline', 'due', 'due at', '2am', '3am', 'a rendre', 'rendu'] };
+const plat = (t) => String(t || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase();
+function ennemiAuto(texte) {
+  const t = ' ' + plat(texte) + ' ';
+  for (const [e, mots] of Object.entries(MOTS_ENNEMIS)) if (mots.some((m) => new RegExp('(?<![a-z])' + m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![a-z])').test(t))) return e;
+  return '';
+}
+const ennemiHook = (h) => h.ennemi || ennemiAuto(h.texte);
+const ajoutJours = (iso, n) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const ecartJours = (a, b) => Math.round((new Date(b + 'T12:00:00Z') - new Date(a + 'T12:00:00Z')) / 864e5);
+const dateCourte = (iso) => new Date(iso + 'T12:00:00Z').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+const fmtHeure = (h) => String(h || '19:00').replace(':00', ' h').replace(':', ' h ');
+
+function libVariante(p) {
+  if (!p || !Object.keys(p).length) return 'format actuel';
+  const m = [];
+  if (p.langue) m.push(p.langue === 'fr' ? 'français' : 'anglais');
+  if (p.ennemi) m.push('ennemi : ' + (ENNEMIS[p.ennemi] || p.ennemi));
+  if (p.heure) m.push('publication ' + fmtHeure(p.heure) + ' (Paris)');
+  if (p.format && p.format !== 'classique') m.push(FORMATS[p.format]?.[0] || p.format);
+  else if (p.demo) m.push('démo actuelle');
+  return m.join(' · ');
+}
+function calPosition(cal, jour) {
+  if (!cal?.actif || !cal.debut) return null;
+  const e = ecartJours(cal.debut, jour); if (e < 0) return null;
+  let cumul = 0;
+  for (const [i, t] of (cal.tests || []).entries()) { const n = Math.max(1, +t.jours || 2); if (e < cumul + n) return { i, n: e - cumul + 1, j: e + 1 }; cumul += n; }
+  return null;
+}
+function calBase(cal, i) {
+  const b = { ...CAL_BASE };
+  for (const t of (cal.tests || []).slice(0, i)) { const g = (cal.gagnants || {})[t.id]; if ((g === 'A' || g === 'B') && t[g]) Object.assign(b, t[g]); }
+  return b;
+}
+function calDebutTest(cal, i) { return ajoutJours(cal.debut, (cal.tests || []).slice(0, i).reduce((a, t) => a + Math.max(1, +t.jours || 2), 0)); }
+const projetCalendrier = () => S.brouillon.projets.find((p) => p.calendrier) || S.brouillon.projets.find((p) => p.actif) || S.brouillon.projets[0];
+
+// Chiffres d'une fiche : TikTok (API) si la vidéo est reliée, sinon la saisie manuelle (ou celle en attente).
+function chiffresFiche(f) {
+  const v = Object.values(S.resultats?.videos || {}).find((x) => x.fiche === f.id);
+  if (v && v.video_views != null) return { vues: +v.video_views, entier: v.full_video_watched_rate ?? null, source: 'TikTok' };
+  const d = [...S.decisions].reverse().find((x) => x.type === 'chiffres' && x.fiche === f.id);
+  const m = d ? { vues: d.vues, entier: d.entier } : f.manuel;
+  if (m && (m.vues != null || m.entier != null)) return { vues: m.vues ?? null, entier: m.entier ?? null, source: d ? 'en attente' : 'saisi' };
+  return null;
+}
+// Fiches d'un test : celles marquées par la machine, sinon déduites de la date (jours de référence).
+function fichesDuTest(cal, i) {
+  const t = cal.tests[i];
+  return Object.values(S.resultats?.fiches || {}).filter((f) => {
+    if (f.test) return f.test === t.id && calPosition(cal, f.jour)?.i === i;
+    const pos = calPosition(cal, f.jour); return pos && pos.i === i;
+  }).sort((a, b) => String(a.jour + a.slot).localeCompare(b.jour + b.slot));
+}
+function comparer(fiches) {
+  const cote = (v) => { const fs = fiches.filter((f) => (f.variante || null) === v); const ch = fs.map(chiffresFiche).filter(Boolean);
+    return { n: fs.length, mesures: ch.length, vues: moyenne(ch.map((c) => c.vues)), entier: moyenne(ch.map((c) => c.entier)) }; };
+  const A = cote('A'), B = cote('B');
+  let propose = null;
+  if (A.mesures >= 2 && B.mesures >= 2) {
+    if (A.entier != null && B.entier != null && A.entier !== B.entier) propose = A.entier > B.entier ? 'A' : 'B';
+    else if (A.vues != null && B.vues != null) propose = A.vues >= B.vues ? 'A' : 'B';
+  }
+  return { A, B, propose };
+}
+
+function vueCalendrier() {
+  const p = projetCalendrier();
+  let h = `<header class="entete"><div><h1>Calendrier de tests</h1><p class="petit" style="margin-top:6px">Une seule chose change à la fois. 3 vidéos/jour, A et B mélangés. On juge à 48 h sur le % regardé en entier, puis les vues ; le gagnant devient la base des tests suivants.</p></div></header>`;
+  if (!p) return h + '<div class="vide">Aucun projet.</div>';
+  const cal = p.calendrier;
+  if (!cal) {
+    return h + `<section class="carte"><h2>${esc(p.nom)} : pas encore de calendrier</h2><p>Plan validé le 23/11 : J1-2 référence · J3-4 langue EN/FR · J5-6 ennemi Turnitin/prof · J7-8 heure 19 h/22 h · J9-10 démo actuelle/écran partagé.</p>
+      <div><button type="button" class="bouton principal" data-action="cal-creer">Créer ce calendrier (J1 = 24 nov.)</button></div></section>` + barreEnregistrer();
+  }
+  const aujourd = jourDubai();
+  const pos = calPosition(cal, aujourd);
+  const fin = ajoutJours(cal.debut, (cal.tests || []).reduce((a, t) => a + Math.max(1, +t.jours || 2), 0) - 1);
+
+  // Bandeau du jour
+  if (!cal.actif) h += `<div class="bandeau att">Calendrier en pause : la machine produit comme avant (anglais, format actuel).</div>`;
+  else if (pos) {
+    const t = cal.tests[pos.i]; const base = calBase(cal, pos.i);
+    h += `<section class="carte" style="border:2px solid var(--bleu)"><div class="sur-titre">Aujourd'hui · J${pos.j} sur ${ecartJours(cal.debut, fin) + 1}</div>
+      <h2 style="margin:4px 0">Test « ${esc(t.nom)} » (jour ${pos.n}/${t.jours || 2})</h2>
+      ${t.B ? `<div class="grille g2"><div class="carte serree"><span><span class="puce info">A</span> <strong>${esc(libVariante(t.A))}</strong></span></div><div class="carte serree"><span><span class="puce att">B</span> <strong>${esc(libVariante(t.B))}</strong></span></div></div><p class="petit">Le reste ne bouge pas : ${esc(libVariante(base))}.</p>`
+        : `<p>${esc(libVariante(base))} : 3 vidéos de base pour comparer la suite.</p>`}
+      ${slotsDuJour().filter((s) => s.projet === p.id).length ? `<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">${slotsDuJour().filter((s) => s.projet === p.id).map((s) =>
+        `<div class="ligne" style="gap:8px;flex-wrap:wrap">${s.variante ? `<span class="puce ${s.variante === 'A' ? 'info' : 'att'}">${s.variante}</span>` : '<span class="puce">Réf.</span>'}
+          <span style="flex:1;min-width:180px">${esc(s.texte)}</span><span class="petit">publier à ${esc(fmtHeure(s.heure_pub || base.heure))} (Paris)</span>
+          <span class="puce ${STATUTS[s.statut]?.[1] || ''}">${esc(STATUTS[s.statut]?.[0] || s.statut)}</span></div>`).join('')}</div>` : ''}
+    </section>`;
+  } else if (ecartJours(cal.debut, aujourd) < 0) h += `<div class="bandeau">Le calendrier commence le ${esc(dateCourte(cal.debut))}</div>`;
+  else h += `<div class="bandeau">Calendrier terminé le ${esc(dateCourte(fin))}. Les gagnants restent la base : pense à un nouveau cycle.</div>`;
+
+  // Réglages du calendrier
+  h += `<section class="carte"><div class="ligne entre" style="flex-wrap:wrap;gap:12px"><h2>${esc(p.nom)} · ${esc(dateCourte(cal.debut))} → ${esc(dateCourte(fin))}</h2>
+    <div class="ligne" style="gap:12px;flex-wrap:wrap"><label class="champ" style="flex-direction:row;align-items:center;gap:8px;white-space:nowrap">Départ (J1) <input type="date" class="saisie" data-action-saisie="cal-debut" value="${esc(cal.debut)}"></label>
+    <button type="button" class="bouton" data-action="cal-actif">${cal.actif ? 'Mettre en pause' : 'Reprendre'}</button></div></div>`;
+
+  // Les tests
+  (cal.tests || []).forEach((t, i) => {
+    const d0 = calDebutTest(cal, i); const d1 = ajoutJours(d0, Math.max(1, +t.jours || 2) - 1);
+    const base = calBase(cal, i); const g = (cal.gagnants || {})[t.id];
+    const fs = fichesDuTest(cal, i); const c = comparer(fs);
+    const juge48 = ecartJours(d1, aujourd) >= 2;
+    const etat = g ? ['Jugé : ' + g + ' gagne', 'ok'] : aujourd < d0 ? ['À venir', ''] : aujourd <= d1 ? ['En cours', 'info'] : (t.B ? [juge48 ? 'À juger' : 'Attente 48 h', 'att'] : ['Fait', 'ok']);
+    const jA = ecartJours(cal.debut, d0) + 1;
+    h += `<div style="border-top:1px solid var(--doux);padding-top:14px;margin-top:14px">
+      <div class="ligne entre" style="flex-wrap:wrap;gap:8px"><div class="ligne" style="gap:10px"><strong>J${jA}${t.jours > 1 ? '-' + (jA + (+t.jours || 2) - 1) : ''} · ${esc(t.nom)}</strong><span class="petit">${esc(dateCourte(d0))} → ${esc(dateCourte(d1))}</span></div>
+        <div class="ligne" style="gap:6px"><span class="puce ${etat[1]}">${esc(etat[0])}</span>
+          <button type="button" class="bouton" style="padding:0 10px" data-action="cal-monter" data-i="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Avancer ce test">↑</button>
+          <button type="button" class="bouton" style="padding:0 10px" data-action="cal-descendre" data-i="${i}" ${i === cal.tests.length - 1 ? 'disabled' : ''} aria-label="Reculer ce test">↓</button></div></div>`;
+    if (t.B) {
+      const ligne = (v, s) => `<div class="carte serree" style="${g === v ? 'border:2px solid var(--vert)' : ''}"><div class="ligne entre"><span><span class="puce ${v === 'A' ? 'info' : 'att'}">${v}</span> <strong>${esc(libVariante(t[v]))}</strong></span></div>
+        <div class="grille g3" style="gap:6px;margin-top:6px"><div class="chiffre"><b style="font-size:17px">${s.mesures}/${s.n}</b>mesurées</div><div class="chiffre"><b style="font-size:17px">${pct(s.entier, 1)}</b>en entier</div><div class="chiffre"><b style="font-size:17px">${s.vues == null ? '—' : nombre(s.vues)}</b>vues moy.</div></div></div>`;
+      h += `<div class="grille g2" style="margin-top:8px">${ligne('A', c.A)}${ligne('B', c.B)}</div><p class="petit" style="margin-top:6px">Le reste ne bouge pas : ${esc(libVariante(base))}.</p>`;
+      if (g) h += `<p class="petit">Gagnant confirmé : <strong>${g}</strong> (${esc(libVariante(t[g]))}). <button type="button" class="lien-bouton" data-action="cal-gagnant" data-id="${esc(t.id)}" data-v="">Annuler</button></p>`;
+      else if (c.propose) h += `<div class="ligne" style="gap:8px;flex-wrap:wrap;margin-top:8px"><span>Proposition : <strong>${c.propose}</strong> gagne${juge48 ? '' : ' (attendre 48 h après les dernières publications pour confirmer)'}.</span>
+        <button type="button" class="bouton vert" data-action="cal-gagnant" data-id="${esc(t.id)}" data-v="${c.propose}">Garder ${c.propose}</button>
+        <button type="button" class="bouton" data-action="cal-gagnant" data-id="${esc(t.id)}" data-v="${c.propose === 'A' ? 'B' : 'A'}">Garder ${c.propose === 'A' ? 'B' : 'A'}</button></div>`;
+      else if (aujourd > d1) h += `<p class="petit">Il faut au moins 2 vidéos mesurées de chaque côté pour proposer un gagnant (saisie plus bas).</p>`;
+    } else {
+      h += `<p class="petit" style="margin-top:6px">${esc(libVariante(base))} · ${fs.length} vidéo(s)${fs.length ? ` · en entier ${pct(moyenne(fs.map(chiffresFiche).filter(Boolean).map((x) => x.entier)), 1)}` : ''}</p>`;
+    }
+    h += `</div>`;
+  });
+  h += `</section>`;
+
+  // Saisie des chiffres (en attendant l'API TikTok)
+  const toutes = (cal.tests || []).flatMap((t, i) => fichesDuTest(cal, i).map((f) => ({ f, t })));
+  if (toutes.length) {
+    h += `<section class="carte"><h2>Chiffres à 48 h</h2><p class="petit">${S.tiktok?.connecte ? 'TikTok est connecté : les chiffres arrivent seuls. Saisie possible pour les vidéos non reliées.' : 'En attendant l\'API TikTok : ouvre la vidéo dans TikTok → Statistiques, et recopie les vues et le « % regardé en entier », 48 h après la publication.'}</p>
+      <div class="tableau"><table><thead><tr><th>Jour</th><th>Var.</th><th>Hook</th><th>Vues</th><th>% en entier</th><th></th></tr></thead><tbody>
+      ${toutes.map(({ f, t }) => { const ch = chiffresFiche(f); const api = ch?.source === 'TikTok'; const vieux = ecartJours(f.jour, aujourd) >= 2;
+        return `<tr><td>J${calPosition(cal, f.jour)?.j || '?'}<div class="petit">${esc(dateCourte(f.jour))}</div></td>
+        <td>${f.variante ? `<span class="puce ${f.variante === 'A' ? 'info' : 'att'}">${f.variante}</span>` : '<span class="petit">réf.</span>'}</td>
+        <td style="max-width:260px">${esc(f.texte)}<div class="petit">${esc(t.nom)}${f.heure_pub ? ' · publier ' + esc(fmtHeure(f.heure_pub)) : ''}${f.drive_url ? ` · <a href="${esc(f.drive_url)}" target="_blank" rel="noopener">vidéo</a>` : ''}</div></td>
+        ${api ? `<td>${nombre(ch.vues)}</td><td>${pct(ch.entier, 1)}</td><td><span class="puce ok">TikTok</span></td>`
+          : `<td><input class="saisie" style="width:96px" inputmode="numeric" id="cv-${esc(f.id)}" aria-label="Vues" value="${ch?.vues ?? ''}" placeholder="vues"></td>
+             <td><input class="saisie" style="width:80px" inputmode="decimal" id="ce-${esc(f.id)}" aria-label="% regardé en entier" value="${ch?.entier != null ? String(+(ch.entier * 100).toFixed(1)).replace('.', ',') : ''}" placeholder="%"></td>
+             <td><button type="button" class="bouton ${!ch && vieux ? 'principal' : ''}" data-action="cal-chiffres" data-fiche="${esc(f.id)}">${ch ? (ch.source === 'en attente' ? 'Envoyé' : 'Modifier') : 'Enregistrer'}</button></td>`}</tr>`; }).join('')}
+      </tbody></table></div></section>`;
+  }
+
+  // Textes proposés (à valider avant d'entrer dans la machine)
+  const enCours = new Set(S.decisions.filter((d) => d.type === 'proposition_traitee').map((d) => d.proposition));
+  const existants = new Set(S.brouillon.projets.flatMap((x) => (x.hooks || []).map((k) => k.id)));
+  const props = (S.resultats?.propositions || []).filter((x) => !enCours.has(x.id) && !existants.has(x.id));
+  if (props.length) {
+    h += `<section class="carte"><h2>Textes de hook proposés (${props.length})</h2><p class="petit">Écrits par Claude pour les tests. Corrige le texte si besoin, puis ajoute ou écarte. Rien n'entre dans la machine sans ton accord.</p>
+      ${props.map((x) => `<div class="ligne" style="border-top:1px solid var(--doux);padding-top:10px;gap:8px;flex-wrap:wrap">
+        <span class="puce ${x.langue === 'fr' ? 'att' : 'info'}">${x.langue === 'fr' ? 'FR' : 'EN'}</span>${x.ennemi ? `<span class="puce">${esc(ENNEMIS[x.ennemi] || x.ennemi)}</span>` : ''}<span class="puce">${esc(TONS[x.ton] || x.ton)}</span>
+        <input class="saisie" style="flex:1;min-width:220px" id="pr-${esc(x.id)}" value="${esc(x.texte)}" aria-label="Texte proposé">
+        <button type="button" class="bouton vert" data-action="prop-ok" data-id="${esc(x.id)}">Ajouter</button>
+        <button type="button" class="bouton" data-action="prop-non" data-id="${esc(x.id)}">Écarter</button>
+        ${x.pourquoi ? `<div class="petit" style="flex-basis:100%">${esc(x.pourquoi)}</div>` : ''}</div>`).join('')}</section>`;
+  }
+
+  // Textes disponibles par variante (pour éviter les trous)
+  const hooks = (p.hooks || []).filter((k) => (k.texte || '').trim());
+  const compte = (f) => hooks.filter(f).length;
+  h += `<section class="carte"><h2>Textes disponibles</h2><p class="petit">Chaque test a besoin d'au moins 3 textes par variante (un texte ne revient pas avant 14 jours). Étiquettes modifiables dans Projets → textes de hook.</p>
+    <div class="grille g4">
+      <div class="chiffre"><b>${compte((k) => (k.langue || 'en') === 'en')}</b>anglais</div>
+      <div class="chiffre"><b>${compte((k) => k.langue === 'fr')}</b>français</div>
+      ${['turnitin', 'prof'].map((e) => `<div class="chiffre"><b>${compte((k) => ennemiHook(k) === e && (k.langue || 'en') === 'en')} EN · ${compte((k) => ennemiHook(k) === e && k.langue === 'fr')} FR</b>${esc(ENNEMIS[e])}</div>`).join('')}
+    </div></section>`;
+  return h + barreEnregistrer();
+}
+
 // ------------------------------------------------------------------ écran : Réglages
 function vueReglages() {
   const g = S.brouillon.general || (S.brouillon.general = {});
@@ -594,7 +782,7 @@ function rendre() {
   if (!S.charge) return;
   const [page, id] = route();
   const vues = { aujourdhui: vueAujourdhui, projets: vueProjets, projet: () => vueProjet(id), personnages: vuePersonnages,
-                 personnage: () => vuePersonnage(id), resultats: vueResultats, veille: vueVeille, banc: vueBanc, historique: vueHistorique, reglages: vueReglages };
+                 personnage: () => vuePersonnage(id), resultats: vueResultats, calendrier: vueCalendrier, veille: vueVeille, banc: vueBanc, historique: vueHistorique, reglages: vueReglages };
   const actif = { projet: 'projets', personnage: 'personnages' }[page] || page;
   const y = window.scrollY;
   app.innerHTML = cadre(actif, (vues[page] || vueAujourdhui)());
@@ -661,6 +849,28 @@ const ACTIONS = {
   relier: (el) => decider({ type: 'liaison', video: el.dataset.video, fiche: el.dataset.fiche }, 'Enregistré'),
   noter: (el) => { S.decisions = S.decisions.filter((d) => !(d.type === 'note' && d.fiche === el.dataset.fiche));
     decider({ type: 'note', fiche: el.dataset.fiche, note: +el.dataset.note }, `Prévision : ${el.dataset.note}/10`); },
+  'cal-creer': () => { projetCalendrier().calendrier = copie(CAL_DEFAUT); modifier(); rendre(); },
+  'cal-actif': () => { const c = projetCalendrier().calendrier; c.actif = !c.actif; modifier(); rendre(); },
+  'cal-monter': (el) => { const t = projetCalendrier().calendrier.tests; const i = +el.dataset.i; [t[i - 1], t[i]] = [t[i], t[i - 1]]; modifier(); rendre(); },
+  'cal-descendre': (el) => { const t = projetCalendrier().calendrier.tests; const i = +el.dataset.i; [t[i + 1], t[i]] = [t[i], t[i + 1]]; modifier(); rendre(); },
+  'cal-gagnant': (el) => { const c = projetCalendrier().calendrier; c.gagnants = c.gagnants || {};
+    if (el.dataset.v) c.gagnants[el.dataset.id] = el.dataset.v; else delete c.gagnants[el.dataset.id];
+    if (S.sale) { modifier(); rendre(); toast('Pense à enregistrer'); } else enregistrer(); },
+  'cal-chiffres': (el) => { const id = el.dataset.fiche;
+    const vues = (document.getElementById('cv-' + id)?.value || '').replace(/[\s.  ]/g, '');
+    const ent = (document.getElementById('ce-' + id)?.value || '').replace('%', '').replace(',', '.').trim();
+    if (vues === '' && ent === '') return toast('Saisis au moins les vues ou le %.');
+    if ((vues !== '' && !/^\d+$/.test(vues)) || (ent !== '' && (isNaN(+ent) || +ent < 0 || +ent > 100))) return toast('Vues : un nombre entier · % en entier : entre 0 et 100.');
+    S.decisions = S.decisions.filter((d) => !(d.type === 'chiffres' && d.fiche === id));
+    decider({ type: 'chiffres', fiche: id, vues: vues === '' ? null : +vues, entier: ent === '' ? null : +ent / 100 }, 'Chiffres enregistrés'); },
+  'prop-ok': async (el) => { const x = (S.resultats?.propositions || []).find((y) => y.id === el.dataset.id); if (!x) return;
+    if (S.sale) return toast('Enregistre d\'abord tes autres modifications.');
+    const p = S.brouillon.projets.find((y) => y.id === x.projet) || projetCalendrier();
+    const texte = (document.getElementById('pr-' + x.id)?.value || x.texte).trim();
+    (p.hooks = p.hooks || []).push({ id: x.id, texte, ton: x.ton || 'choc', langue: x.langue || 'en', ...(x.ennemi ? { ennemi: x.ennemi } : {}), lieux: x.lieux || [], source: x.source || 'claude' });
+    await enregistrer();
+    if (!S.sale) decider({ type: 'proposition_traitee', proposition: x.id, choix: 'ajoute' }, 'Texte ajouté au projet'); },
+  'prop-non': (el) => decider({ type: 'proposition_traitee', proposition: el.dataset.id, choix: 'ecarte' }, 'Texte écarté'),
   'connecter-tiktok': () => { const etatOauth = Math.random().toString(36).slice(2);
     try { sessionStorage.setItem('studio_tiktok_state', etatOauth); } catch (e) { /* navigation privée */ }
     const u = new URL(S.tiktok.url_autorisation); u.searchParams.set('state', etatOauth); location.href = u.toString(); },
@@ -685,6 +895,9 @@ app.addEventListener('input', (e) => {
   if (a === 'hook-texte') { projetOuvert().hooks[+el.dataset.i].texte = el.value; return modifier(); }
   if (a === 'ingredient') { S.ingredient = el.value; return rendre(); }
   if (a === 'hook-ton') { projetOuvert().hooks[+el.dataset.i].ton = el.value; return modifier(); }
+  if (a === 'hook-langue') { projetOuvert().hooks[+el.dataset.i].langue = el.value; return modifier(); }
+  if (a === 'hook-ennemi') { const k = projetOuvert().hooks[+el.dataset.i]; if (el.value) k.ennemi = el.value; else delete k.ennemi; return modifier(); }
+  if (a === 'cal-debut') { if (el.value) { projetCalendrier().calendrier.debut = el.value; modifier(); rendre(); } return; }
 });
 app.addEventListener('change', (e) => { if (e.target.tagName === 'SELECT') e.target.dispatchEvent(new Event('input', { bubbles: true })); });
 app.addEventListener('keydown', (e) => {
