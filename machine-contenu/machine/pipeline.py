@@ -358,13 +358,45 @@ class Machine:
             self.noter(f"{s['id']} abandonnée : vidéo ratée {s['essais_video']} fois ({raison})")
             self.alerte(f"⚠️ {self.titre(s)} abandonnée : la vidéo a échoué {s['essais_video']} fois ({raison}).")
 
-    def demo_locale(self, projet):
+    def demos_dispo(self):
+        """Corps de démo déposés dans le Drive (MACHINE CONTENU/demos), lus une fois par passage."""
+        if not hasattr(self, "_demos"):
+            try:
+                self._demos = sorted((f for f in drive.lister(["demos"]) if f["nom"].lower().endswith(".mp4")),
+                                     key=lambda f: f["nom"])
+            except Exception as e:
+                log(f"liste des démos illisible : {e}")
+                self._demos = []
+        return self._demos
+
+    def demo_locale(self, projet, s=None):
+        """« defaut » = rotation de toutes les démos du Drive : jamais deux fois la même démo le même jour,
+        la moins utilisée d'abord. Sinon : l'identifiant Drive d'une démo précise."""
         d = projet.get("demo") or "defaut"
-        if d == "defaut":
+        if d != "defaut":
+            chemin = os.path.join(dossier_travail("demos"), f"{projet['id']}_{d}.mp4")
+            if not os.path.exists(chemin):
+                drive.lire(d, chemin)
+            if s is not None:
+                s["demo"] = d
+            return chemin
+        demos = self.demos_dispo()
+        if not demos:
+            if s is not None:
+                s["demo"] = "corps_demo"
             return os.path.join(RACINE, "medias", "corps_demo.mp4")
-        chemin = os.path.join(dossier_travail("demos"), f"{projet['id']}_{d}.mp4")
+        if s is not None and s.get("demo") in {f["nom"] for f in demos}:
+            choix = next(f for f in demos if f["nom"] == s["demo"])  # nouvel essai : même démo
+        else:
+            du_jour = {x.get("demo") for x in (self.j or {}).get("slots", []) if x is not s}
+            compte = self.etat.setdefault("demos_utilisees", {})
+            choix = min(demos, key=lambda f: (f["nom"] in du_jour, compte.get(f["nom"], 0), f["nom"]))
+            compte[choix["nom"]] = compte.get(choix["nom"], 0) + 1
+            if s is not None:
+                s["demo"] = choix["nom"]
+        chemin = os.path.join(dossier_travail("demos"), choix["nom"])
         if not os.path.exists(chemin):
-            drive.lire(d, chemin)
+            drive.lire(choix["id"], chemin)
         return chemin
 
     def video_prete(self, s, url):
@@ -376,7 +408,7 @@ class Machine:
             return self.video_ratee(s, rapport.get("probleme", ""))
         perso, projet, _ = self.contexte(s)
         nom = f"{jour()}_{s['id']}_{s['personnage']}_{s['hook']}.mp4"
-        finale = monter(hook, s["texte"], os.path.join(d, nom), self.demo_locale(projet))
+        finale = monter(hook, s["texte"], os.path.join(d, nom), self.demo_locale(projet, s))
         s["drive_url"] = drive.deposer(finale, "videos", [projet["nom"], jour()])
         s["statut"] = "livre"
         s["livre_a"] = horodatage()

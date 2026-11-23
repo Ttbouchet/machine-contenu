@@ -265,7 +265,7 @@ function vueProjet(id) {
       <div class="champ">Vidéos par jour<div class="compteur"><button type="button" aria-label="Une vidéo de moins" data-action="nb" data-d="-1">−</button><b>${p.videos_par_jour || 0}</b><button type="button" aria-label="Une vidéo de plus" data-action="nb" data-d="1">+</button></div>
         <small>≈ ${nombre((p.videos_par_jour || 0) * 85)} crédits/jour estimés</small></div>
       <label class="champ">Modèle vidéo<select data-p="modele_video">${Object.entries(MODELES_VIDEO).map(([k, v]) => `<option value="${k}" ${(p.modele_video || 'kling') === k ? 'selected' : ''}>${v}</option>`).join('')}</select><small>Le banc d'essai dit lequel est le meilleur.</small></label>
-      <label class="champ">Démo montée après le hook<input data-p="demo" value="${esc(p.demo || 'defaut')}"><small>« defaut » ou l'identifiant Drive d'une vidéo écran.</small></label>
+      <label class="champ">Démo montée après le hook<input data-p="demo" value="${esc(p.demo || 'defaut')}"><small>« defaut » = toutes les démos du dossier Drive MACHINE CONTENU/demos, à tour de rôle (jamais deux fois la même le même jour). Sinon : l'identifiant Drive d'une démo précise.</small></label>
     </div>
     <div class="champ">Jours de production<div class="puces-choix">${JOURS.map((n, i) => `<button type="button" data-action="jour" data-n="${i + 1}" aria-pressed="${jours.includes(i + 1)}">${n}</button>`).join('')}</div></div></section>
     <section class="carte"><h2>Formats de vidéo (rétention)</h2><p class="petit">Les vidéos du jour sont réparties entre les formats cochés.</p>
@@ -394,7 +394,7 @@ function vueHistorique() {
 }
 
 // ------------------------------------------------------------------ écran : Résultats (chiffres TikTok + fiche de chaque vidéo)
-const INGREDIENTS = { hook: 'Hook', ton: 'Ton du hook', reaction: 'Réaction', decor: 'Décor', tenue: 'Tenue', cadrage: 'Cadrage',
+const INGREDIENTS = { hook: 'Hook', ton: 'Ton du hook', reaction: 'Réaction', decor: 'Décor', tenue: 'Tenue', cadrage: 'Cadrage', demo: 'Démo écran',
                       modele_video: 'Modèle vidéo', personnage: 'Personnage', format: 'Format', jour_semaine: 'Jour de publication',
                       heure_pub: 'Heure de publication (Dubaï)' };
 const JOURS_LONGS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
@@ -416,7 +416,7 @@ function lignesResultats() {
     return { v, f, d,
       texte: f?.texte || hr?.texte || v.texte_lu || v.caption || '',
       ing: { hook: f?.texte || hr?.texte || null, ton: TONS[f?.ton || hr?.ton] || null, reaction: f?.reaction, decor: f?.decor, tenue: f?.tenue,
-             cadrage: f?.cadrage, modele_video: MODELES_VIDEO[f?.modele_video] || f?.modele_video, personnage: f ? nomPerso(f.personnage) : null,
+             cadrage: f?.cadrage, demo: f?.demo ? joli(f.demo.replace(/\.mp4$/i, '')) : null, modele_video: MODELES_VIDEO[f?.modele_video] || f?.modele_video, personnage: f ? nomPerso(f.personnage) : null,
              format: f ? (FORMATS[f.format]?.[0] || 'Classique') : null,
              jour_semaine: d ? JOURS_LONGS[+new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Dubai' })).getDay()] : null,
              heure_pub: hDub == null ? null : `${String(Math.floor(hDub / 3) * 3).padStart(2, '0')} h – ${String(Math.floor(hDub / 3) * 3 + 3).padStart(2, '0')} h` },
