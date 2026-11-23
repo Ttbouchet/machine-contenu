@@ -15,7 +15,7 @@ import json
 import os
 import time
 
-from . import drive, resultats, scenarios
+from . import drive, resultats, scenarios, veille
 from .base import (PUBLIC, RACINE, SIMULATION, TECH, dossier_travail, heure, horodatage, jour, lien_studio, log,
                    maintenant)
 from .controles import (Visage, controler_image, controler_video, description_casting, identite_depuis_photo,
@@ -536,6 +536,8 @@ class Machine:
                         v.update(fiche=d.get("fiche") or None, liaison="manuel", possibles=[])
                 elif d.get("type") == "releve_tiktok":
                     self._releve_demande = True
+                elif d.get("type") == "veille_lancer":
+                    self._veille_demandee = True
             except Exception as ex:
                 log(f"décision ignorée ({ex}) : {d}")
             faites.append(d["id"])
@@ -647,6 +649,11 @@ def executer(commande):
             m.resultats_du_jour()
         except Exception as e:
             log(f"résultats : {e}")
+        try:
+            if commande == "suivi":
+                veille.avancer(m)
+        except Exception as e:
+            log(f"veille : {e}")
         m.etat["derniere_execution"]["resultat"] = "ok"
     except Exception as e:
         m.etat["derniere_execution"]["resultat"] = f"erreur : {e}"

@@ -33,6 +33,7 @@ const icone = {
   banc: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg>',
   histo: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 3v5h5M12 7v5l3 2"></path></svg>',
   resultats: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"></path><path d="M15 7h6v6"></path></svg>',
+  veille: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4.3-4.3"></path></svg>',
   reglages: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg>',
 };
 
@@ -118,7 +119,7 @@ async function decider(decision, message) {
 function cadre(page, html) {
   const n = aValider().length;
   const liens = [['aujourdhui', 'Aujourd\'hui', icone.jour, n], ['projets', 'Projets', icone.dossier], ['personnages', 'Personnages', icone.perso],
-                 ['resultats', 'Résultats', icone.resultats], ['banc', 'Banc d\'essai IA', icone.banc], ['historique', 'Historique', icone.histo], ['reglages', 'Réglages', icone.reglages]];
+                 ['resultats', 'Résultats', icone.resultats], ['veille', 'Veille', icone.veille], ['banc', 'Banc d\'essai IA', icone.banc], ['historique', 'Historique', icone.histo], ['reglages', 'Réglages', icone.reglages]];
   const lien = ([id, nom, ic, badge]) => `<a href="#/${id}" ${page === id ? 'aria-current="page"' : ''}>${ic}<span>${nom}</span>${badge ? `<span class="pastille">${badge}</span>` : ''}</a>`;
   const solde = S.etat.solde_kie;
   return `<div class="cadre">
@@ -132,7 +133,7 @@ function cadre(page, html) {
       </div>
     </nav>
     <main class="contenu" id="contenu">${html}</main>
-    <nav class="onglets" aria-label="Navigation">${liens.filter((l) => !['historique', 'banc'].includes(l[0])).map(([id, nom, ic, badge]) =>
+    <nav class="onglets" aria-label="Navigation">${liens.filter((l) => !['historique', 'banc', 'veille'].includes(l[0])).map(([id, nom, ic, badge]) =>
       `<a href="#/${id}" ${page === id ? 'aria-current="page"' : ''}>${ic}<span>${nom.replace(' IA', '')}</span>${badge ? `<span class="pastille">${badge}</span>` : ''}</a>`).join('')}</nav>
   </div>`;
 }
@@ -393,6 +394,45 @@ function vueHistorique() {
   return h;
 }
 
+// ------------------------------------------------------------------ écran : Veille (ce qui marche en ce moment sur TikTok)
+const fmtK = (n) => n >= 1e6 ? (n / 1e6).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' M' : n >= 1e3 ? Math.round(n / 1e3) + ' k' : String(n || 0);
+
+function vueVeille() {
+  const V = (S.resultats || {}).veille || {}; const sem = V.semaines || {};
+  const cles = Object.keys(sem).sort().reverse();
+  const demande = S.decisions.some((d) => d.type === 'veille_lancer');
+  const enCours = (S.etat.veille || {}).en_cours;
+  const choisie = cles.includes(S.semaineVeille) ? S.semaineVeille : cles[0];
+  const w = choisie ? sem[choisie] : null;
+  const ap = V.apify;
+  let h = `<header class="entete"><div><h1>Veille</h1><p class="petit" style="margin-top:6px">Chaque dimanche à 4 h, la machine récolte les vidéos TikTok de la semaine (mots-clés étudiants + comptes surveillés), garde celles qui font beaucoup plus de vues que la taille du compte, et l'IA lit leur hook. Partie 2 à venir : écriture de nos hooks + note du juge.</p></div>
+    ${enCours ? '<span class="puce info">Récolte en cours…</span>' : demande ? '<span class="puce info">Demandée : prochain passage</span>' : '<button type="button" class="bouton" data-action="lancer-veille">Lancer maintenant</button>'}</header>`;
+  if (!cles.length) {
+    return h + `<section class="carte"><p class="petit">Aucune veille pour l'instant. Elle démarre dès que le jeton Apify est rangé dans les secrets GitHub (APIFY_TOKEN), puis chaque dimanche.</p></section>`;
+  }
+  if (cles.length > 1) h += `<div class="puces-choix" role="group" aria-label="Semaine">${cles.map((k) => `<button type="button" data-action="semaine-veille" data-s="${esc(k)}" aria-pressed="${k === choisie}">${esc(k.replace(/^\d+-/, ''))}</button>`).join('')}</div>`;
+  if (w.erreur) return h + `<section class="carte"><p><span class="puce ko">${esc(w.erreur)}</span></p></section>`;
+  const vids = w.videos || [];
+  const compte = (f) => { const c = {}; vids.forEach((v) => { const x = (v.lecture || {})[f]; if (x) c[x] = (c[x] || 0) + 1; }); return Object.entries(c).sort((a, b) => b[1] - a[1]).slice(0, 5); };
+  const resume = (titre, f) => `<div><h3 style="font-size:14px;margin-bottom:6px">${titre}</h3>${compte(f).map(([k, n]) => `<div class="petit">${esc(k)} · <strong style="color:var(--encre)">${n}</strong></div>`).join('') || '<div class="petit">—</div>'}</div>`;
+  h += `<section class="carte"><div class="ligne entre"><h2>Semaine ${esc(choisie.replace(/^\d+-/, ''))}</h2><span class="petit">${esc((w.date || '').replace('T', ' '))} · ${nombre(w.recoltees)} vidéos récoltées · ${vids.length} gardées · Apify ${(w.cout_usd || 0).toFixed(2)} $${ap ? ` · ce mois-ci ${ap.depense_mois.toFixed(2)} $ / ${ap.plafond.toFixed(2)} $` : ''}</span></div>
+    <div class="grille" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-top:12px">${resume('Formats qui marchent', 'format')}${resume('Ennemis', 'ennemi')}${resume('Émotions', 'emotion')}</div></section>`;
+  h += `<section class="carte"><h2>Les vidéos de la semaine</h2><p class="petit">Classées par « vues ÷ abonnés » : ce qui a marché grâce au format, pas grâce à la célébrité du compte.</p>
+    ${vids.map((v, i) => { const l = v.lecture || {};
+      return `<article style="border-top:1px solid var(--doux);padding-top:12px;margin-top:12px">
+        <div class="ligne entre"><strong>${i + 1}. ${l.hook_texte ? `« ${esc(l.hook_texte)} »` : '<span class="petit">(pas de texte à l\'écran)</span>'}</strong>
+          <a class="bouton" href="${esc(v.url)}" target="_blank" rel="noopener">Voir sur TikTok</a></div>
+        <div class="ligne" style="margin-top:6px"><span class="puce info">${fmtK(v.vues)} vues</span><span class="puce">@${esc(v.compte)} · ${fmtK(v.abonnes)} abonnés</span><span class="puce ok">× ${nombre(v.score)}</span>
+          ${l.format ? `<span class="puce">${esc(l.format)}</span>` : ''}${l.ennemi ? `<span class="puce att">ennemi : ${esc(l.ennemi)}</span>` : ''}${l.emotion ? `<span class="puce">${esc(l.emotion)}</span>` : ''}${v.duree ? `<span class="puce">${esc(v.duree)} s</span>` : ''}</div>
+        ${l.structure ? `<p class="petit" style="margin-top:6px"><strong style="color:var(--texte)">Structure :</strong> ${esc(l.structure)}</p>` : ''}
+        ${l.pourquoi ? `<p class="petit"><strong style="color:var(--texte)">Pourquoi ça marche :</strong> ${esc(l.pourquoi)}</p>` : ''}
+        ${l.idee_rewordy ? `<p class="petit"><strong style="color:var(--texte)">Idée pour nous :</strong> ${esc(l.idee_rewordy)}</p>` : ''}
+        ${l.erreur ? `<p class="petit">Lecture IA impossible : ${esc(l.erreur)}</p>` : ''}
+        ${v.recherche ? `<p class="petit">Trouvée par : « ${esc(v.recherche)} »</p>` : ''}
+      </article>`; }).join('')}</section>`;
+  return h;
+}
+
 // ------------------------------------------------------------------ écran : Résultats (chiffres TikTok + fiche de chaque vidéo)
 const INGREDIENTS = { hook: 'Hook', ton: 'Ton du hook', reaction: 'Réaction', decor: 'Décor', tenue: 'Tenue', cadrage: 'Cadrage', demo: 'Démo écran',
                       modele_video: 'Modèle vidéo', personnage: 'Personnage', format: 'Format', jour_semaine: 'Jour de publication',
@@ -554,7 +594,7 @@ function rendre() {
   if (!S.charge) return;
   const [page, id] = route();
   const vues = { aujourdhui: vueAujourdhui, projets: vueProjets, projet: () => vueProjet(id), personnages: vuePersonnages,
-                 personnage: () => vuePersonnage(id), resultats: vueResultats, banc: vueBanc, historique: vueHistorique, reglages: vueReglages };
+                 personnage: () => vuePersonnage(id), resultats: vueResultats, veille: vueVeille, banc: vueBanc, historique: vueHistorique, reglages: vueReglages };
   const actif = { projet: 'projets', personnage: 'personnages' }[page] || page;
   const y = window.scrollY;
   app.innerHTML = cadre(actif, (vues[page] || vueAujourdhui)());
@@ -615,6 +655,8 @@ const ACTIONS = {
   'basculer-perso': () => { const p = persoOuvert(); p.statut = p.statut === 'actif' ? 'pause' : 'actif'; modifier(); rendre(); },
   oublier: (el) => decider({ type: 'regle_oublier', fr: el.dataset.fr }, 'La règle sera retirée au prochain passage'),
   pause: () => { const g = S.brouillon.general; g.pause = !g.pause; enregistrer(); },
+  'lancer-veille': () => decider({ type: 'veille_lancer' }, 'Veille demandée : récolte lancée au prochain passage (≤ 1 h), rapport environ 1 h après'),
+  'semaine-veille': (el) => { S.semaineVeille = el.dataset.s; rendre(); },
   'releve-tiktok': () => decider({ type: 'releve_tiktok' }, 'Relevé demandé : il sera fait au prochain passage (≤ 1 h)'),
   relier: (el) => decider({ type: 'liaison', video: el.dataset.video, fiche: el.dataset.fiche }, 'Enregistré'),
   noter: (el) => { S.decisions = S.decisions.filter((d) => !(d.type === 'note' && d.fiche === el.dataset.fiche));

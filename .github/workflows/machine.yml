@@ -48,6 +48,7 @@ jobs:
       - name: Lancer
         env:
           KIE_API_KEY: ${{ secrets.KIE_API_KEY }}
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
           DRIVE_SCRIPT_URL: ${{ secrets.DRIVE_SCRIPT_URL }}
           DRIVE_SCRIPT_SECRET: ${{ secrets.DRIVE_SCRIPT_SECRET }}
           NB_VIDEOS: ${{ inputs.nombre }}

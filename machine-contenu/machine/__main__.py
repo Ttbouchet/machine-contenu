@@ -51,6 +51,13 @@ def diagnostic():
         r = kie.vision('Is there a person in this image? Answer ONLY with JSON: {"ok":true_or_false}', [url])
         return "fonctionne" if r.get("ok") else f"réponse inattendue {r}"
     essai("Relecture IA (vision)", vision)
+    def apify():
+        if not secret("APIFY_TOKEN", obligatoire=False):
+            return "pas encore de jeton (veille désactivée)"
+        from .veille import solde_du_mois
+        dep, lim = solde_du_mois()
+        return f"connecté, {dep:.2f} $ dépensés sur {lim:.2f} $ ce mois-ci"
+    essai("Apify (veille)", apify)
     essai("Décisions de Studio", lambda: f"{len(drive.decisions_lire())} en attente")
     rapport = "Diagnostic de la machine\n\n" + "\n".join(resultats)
     try:
