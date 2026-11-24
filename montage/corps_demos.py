@@ -79,6 +79,20 @@ CORPS = {
         ("IMG_9823.MOV", 46, 93, 12, ""),
         ("IMG_9823.MOV", 95.5, 104, 1.5, "rewritten. sounds like me now ✅"),
     ],
+    # Session 14 (24/11) — nouveaux corps tirés de IMG_9823 (EN, autre essai, nouvelle interface)
+    "detecteur90": [
+        ("IMG_9823.MOV", 0, 5, 2.5, "pasted my essay into an AI detector"),
+        ("IMG_9823.MOV", 6, 30.5, 9, ""),
+        ("IMG_9823.MOV", 31.5, 35.5, 1, "90% AI. would you still submit it? 😬"),
+    ],
+    "parcours_court": [
+        ("IMG_9823.MOV", 0, 4, 3, "my essay vs an AI detector"),
+        ("IMG_9823.MOV", 6, 30.5, 14, ""),
+        ("IMG_9823.MOV", 31.5, 34, 1, "90% AI 💀"),
+        ("IMG_9823.MOV", 36, 45, 4.5, "one click on humanize"),
+        ("IMG_9823.MOV", 46, 93, 20, ""),
+        ("IMG_9823.MOV", 95.5, 101, 1.5, "sounds like me now ✅"),
+    ],
 }
 
 # Corps filmés directement en français (appli en français) : utilisés tels quels avec --fr
@@ -90,6 +104,31 @@ CORPS_FR = {
         ("IMG_9819.MOV", 30, 39, 3, ""),
         ("IMG_9819.MOV", 39, 86, 12, ""),
         ("IMG_9819.MOV", 88, 95, 1.5, "réécrite, on dirait vraiment moi ✅"),
+    ],
+    # Session 14 (24/11) — nouveaux corps FR tirés des vidéos du 23/11
+    "detecteur82": [
+        ("IMG_9817.MOV", 0, 3, 1.5, "j'ai passé ma dissert au détecteur d'IA"),
+        ("IMG_9817.MOV", 3, 28.5, 8, ""),
+        ("IMG_9817.MOV", 29, 33.5, 1, "82 % IA. tu la rendrais quand même ? 😬"),
+    ],
+    "plagiat": [
+        ("IMG_9821.MOV", 0, 6, 3, "j'ai passé ma dissert au vérificateur de plagiat"),
+        ("IMG_9821.MOV", 6, 30.5, 8, ""),
+        ("IMG_9821.MOV", 30.7, 31.9, 0.5, "100 % original ✅ zéro copié-collé"),
+        ("IMG_9821.MOV", 32, 34, 1, "100 % original ✅ zéro copié-collé"),
+    ],
+    "humaniseur": [
+        ("IMG_9820.MOV", 0, 3, 1.5, "j'ai collé ma dissert dans le humanizer"),
+        ("IMG_9820.MOV", 3, 9, 2, "je choisis le ton"),
+        ("IMG_9820.MOV", 9, 54.5, 12, ""),
+        ("IMG_9820.MOV", 55, 56.3, 0.6, "réécrite, on dirait moi ✅"),
+    ],
+    "parcours_court": [
+        ("IMG_9819.MOV", 0, 13, 8, "ma dissert vs le détecteur d'IA"),
+        ("IMG_9819.MOV", 18, 23, 1.3, "88 % IA 😭"),
+        ("IMG_9819.MOV", 23, 28, 3, "un clic sur « supprimer l'IA »"),
+        ("IMG_9819.MOV", 30, 86, 22, ""),
+        ("IMG_9819.MOV", 88, 94, 1.5, "réécrite ✅ on dirait moi"),
     ],
 }
 

@@ -29,6 +29,15 @@ CASTING_ACTIFS = ("candidats_en_cours", "refs_en_cours")
 NB_CANDIDATS, NB_REFS = 6, 4
 
 
+DEMOS_ANCIENNES = {"ordi_a", "ordi_b", "main_tel", "ecran_tel", "rapide", "detecteur"}
+
+
+def demo_ancienne(nom):
+    """Corps tirés des vidéos du 19/11 (décision du 24/11 : gardés, mais après les démos plus récentes)."""
+    base = nom.lower().rsplit(".", 1)[0]
+    return (base[3:] if base.startswith("fr_") else base) in DEMOS_ANCIENNES
+
+
 def fmt_h(h):
     return f"{int(h)} h" + (f" {int(round((h % 1) * 60)):02d}" if h % 1 else "")
 
@@ -410,7 +419,9 @@ class Machine:
         else:
             du_jour = {x.get("demo") for x in (self.j or {}).get("slots", []) if x is not s}
             compte = self.etat.setdefault("demos_utilisees", {})
-            choix = min(demos, key=lambda f: (f["nom"] in du_jour, compte.get(f["nom"], 0), f["nom"]))
+            # Démos filmées le 19/11 (même essai, même « 82 % ») : seulement quand toutes les neuves ont servi ce jour-là
+            choix = min(demos, key=lambda f: (f["nom"] in du_jour, demo_ancienne(f["nom"]),
+                                              compte.get(f["nom"], 0), f["nom"]))
             compte[choix["nom"]] = compte.get(choix["nom"], 0) + 1
             if s is not None:
                 s["demo"] = choix["nom"]
