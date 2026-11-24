@@ -70,6 +70,27 @@ CORPS = {
         ("IMG_4976.MOV", 27, 30, 3, ""),
         ("IMG_4976.MOV", 30.5, 34, 1, "82% AI. would you still submit it? 😬"),
     ],
+    # Parcours complet filmé le 23/11 (EN) : détecteur 90 % → humaniseur → texte réécrit (finit sur le texte, pas le paywall)
+    "parcours": [
+        ("IMG_9823.MOV", 0, 5, 2.5, "pasted my essay into an AI detector"),
+        ("IMG_9823.MOV", 6, 30.5, 9, ""),
+        ("IMG_9823.MOV", 31.5, 35.5, 1, "90% AI 💀"),
+        ("IMG_9823.MOV", 36, 45, 3, "so I hit humanize"),
+        ("IMG_9823.MOV", 46, 93, 12, ""),
+        ("IMG_9823.MOV", 95.5, 104, 1.5, "rewritten. sounds like me now ✅"),
+    ],
+}
+
+# Corps filmés directement en français (appli en français) : utilisés tels quels avec --fr
+CORPS_FR = {
+    "parcours": [
+        ("IMG_9819.MOV", 0, 13, 6, "j'ai passé ma dissert au détecteur d'IA"),
+        ("IMG_9819.MOV", 18, 23, 1, "88 % IA 😭"),
+        ("IMG_9819.MOV", 23, 28, 2, "du coup j'appuie sur « supprimer l'IA »"),
+        ("IMG_9819.MOV", 30, 39, 3, ""),
+        ("IMG_9819.MOV", 39, 86, 12, ""),
+        ("IMG_9819.MOV", 88, 95, 1.5, "réécrite, on dirait vraiment moi ✅"),
+    ],
 }
 
 
@@ -142,5 +163,6 @@ if __name__ == "__main__":
     fr = "--fr" in args
     for nom in ([a for a in args if a != "--fr"] or CORPS):
         out = os.path.join(SORTIE, f"{'fr_' if fr else ''}{nom}.mp4")
-        fabriquer(nom, en_francais(CORPS[nom]) if fr else CORPS[nom], out)
+        etapes = (CORPS_FR[nom] if nom in CORPS_FR else en_francais(CORPS[nom])) if fr else CORPS[nom]
+        fabriquer(nom, etapes, out)
         print(f"{nom} : {duree(out):.1f} s, {os.path.getsize(out)//1_000_000} Mo", flush=True)
